@@ -1,4 +1,5 @@
 const canvas = document.getElementById("plot");
+canvas.width = window.innerWidth - 50;
 const plot = new Plot(canvas); // TODO ("I don't like this kind of data loading it should be changed to be more dynamic... like just uploading the whole data.json file.");
 plot.types = {"y0" : "line", "y1" : "line"};
 plot.names = {"y0": "#0", "y1": "#1"};
