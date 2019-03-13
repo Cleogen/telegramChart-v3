@@ -1,11 +1,12 @@
 const canvas = document.getElementById("plot");
-canvas.width = window.innerWidth - 50;
-const plot = new Plot(canvas); // TODO ("I don't like this kind of data loading it should be changed to be more dynamic... like just uploading the whole data.json file.");
-plot.types = {"y0" : "line", "y1" : "line"};
-plot.names = {"y0": "#0", "y1": "#1"};
-plot.colors = {"y0": "#3DC23F", "y1": "#F34C44"};
-plot.labelFormat = "Date";
-plot.xAxis = [1542412800000,
+canvas.width = document.body.offsetWidth;
+// TODO ("I don't like this kind of data loading it should be changed to be more dynamic... like just uploading the whole data.json file.");
+const plot = new Plot(
+	canvas,
+	{"y0": "line", "y1": "line"},
+	{"y0": "#0", "y1": "#1"},
+	{"y0": "#3DC23F", "y1": "#F34C44"},
+	[1542412800000,
             1542499200000,
             1542585600000,
             1542672000000,
@@ -116,9 +117,11 @@ plot.xAxis = [1542412800000,
             1551744000000,
             1551830400000,
             1551916800000,
-            1552003200000];
-//plot.xAxis = [1,2,3,4,5,6,7,8,9];
-plot.plot([
+		1552003200000
+	],
+	"Date"
+);
+plot.animateDraw([
 	[
 		"y0",
 		37,

@@ -1,54 +1,57 @@
-function mapValue(num, in_min, in_max, out_min, out_max) {
+function map(num, in_min, in_max, out_min, out_max) {
 	return (num - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
+function midPoint(p1, p2) {
+	return {
+		x: p1.x + (p2.x - p1.x) / 2,
+		y: p1.y + (p2.y - p1.y) / 2
+	};
+}
+
 class Plot {
-	constructor(canvas) {
-		this.ctx = canvas.getContext("2d"); // TODO("Instantiate with all values in constructor");
+	constructor(canvas, types, names, colors, xAxis, labelFormat) {
+		this.ctx = canvas.getContext("2d");//TODO("Clean up, not all parameters are required to be in this object");
+		this.padding = 50;
 		this.h = canvas.height;
 		this.w = canvas.width;
-		this.labelFormat = null;
-		this.names = null;
-		this.colors = null;
-		this.types = null;
-		this.xAxis = null;
-		this.xPoints = [];
+		this.labelFormat = labelFormat;
+		this.names = names;
+		this.types = types;
+		this.xAxis = xAxis;
 		this.yPoints = [];
 		this.lines = {};
+		this.xLimit = 10;
+		this.yLimit = 10;
+
+		let keys = Object.keys(types);
+		for (let i = 0; i < keys.length; i++) {
+			this.lines[keys[i]] = new Line(this.ctx, colors[keys[i]]);
+		}
 	};
 
 	plot(dataset) {
 		if (!this.validate())
 			return false;
 
-		let minX = this.xAxis[0],
-			maxX = this.xAxis[this.xAxis.length - 1],
-			minY = Infinity,
-			maxY = -Infinity,
-			labelLatency = 6;
-
-		dataset.forEach(function (numbers) {
-			numbers.slice(1).forEach(function (num) {
-				minY = Math.min(minY, num);
-				maxY = Math.max(maxY, num);
-			});
-		});
-		this.drawYAxis(minY, maxY);
+		let yVal = this.drawYAxis(dataset);
+		let dif = (this.xAxis.length - 1) / this.xLimit;
+		let count = 0;
 
 		for (let i = 0; i < this.xAxis.length; ++i){
-			let lab = (i % labelLatency === 0) ? this.getLabel(this.xAxis[i]) : ""; // TODO ("@labelLatency must depend on the data points count available width and label format");
-			let value = mapValue(this.xAxis[i], minX, maxX, 50, this.w - 50); // TODO ( " instead of statical padding 50 something else should be done");
+			let lab = "";
+			if (i === Math.round(count * dif)) {
+				lab = this.getLabel(this.xAxis[i]);
+				++count;
+			}
+
+			let value = map(this.xAxis[i], this.xAxis[0], this.xAxis[this.xAxis.length - 1], this.padding, this.w - this.padding); // TODO ( " instead of statical padding 50 something else should be done");
 			let point = new Point(this.ctx, value, this.h - 10, lab);
 			point.draw();
-			this.xPoints.push(point);
 
 			for (let j = 0; j < dataset.length; ++j) {
 				let name = dataset[j][0];
-
-				let entity = mapValue(dataset[j][i + 1], minY, maxY, this.h - 50, 20); // TODO (" this 50 should not be statically typed");
-				if (this.lines[name] === undefined) {
-					this.lines[name] = new Line(this.ctx, this.colors[name]);
-				}
+				let entity = map(dataset[j][i + 1], yVal.min, yVal.max, this.h - this.padding, this.padding);
 				this.lines[name].addPoint(new Point(this.ctx, value, entity)); // TODO(" I am adding each point from one array to another this can be optimised, do it");
 			}
 		}
@@ -58,25 +61,45 @@ class Plot {
 		});
 	};
 
-	drawYAxis(minY, maxY) {
-		let dif = (maxY - minY) / 10; // TODO("15 must not be set statically, it should depend from the height")
-		for (let i = 0; i <= 10; i++) {
-			let val = mapValue(minY + dif * i, minY, maxY, this.h - 50, 20);
+	animateDraw(dataset) {
+		let axis = this.xAxis;
+		this.xAxis = [];
+		let drawing = setInterval(function () { // TODO("Dataset must be dynamically moving, or some argument can be passed to the Line class so it will push outdated points")
+			arguments[0].xAxis.push(axis.shift());
+			arguments[0].redraw(dataset);
+			if (axis.length === 0)
+				clearInterval(drawing);
+		}, 50, this);
+	}
+
+	drawYAxis(dataset) {
+		let minY = Infinity,
+			maxY = -Infinity;
+		dataset.forEach(function (numbers) {
+			numbers.slice(1).forEach(function (num) {
+				minY = Math.min(minY, num);
+				maxY = Math.max(maxY, num);
+			});
+		});
+		let dif = (maxY - minY) / this.yLimit;
+		for (let i = 0; i <= this.yLimit; i++) {
+			let val = map(minY + dif * i, minY, maxY, this.h - this.padding, this.padding);
 			let point = new Point(this.ctx, 10, val + 10, Math.round(minY + i * dif));
 			point.draw();
-			this.yPoints.push(point);
 		}
+		return {"min": minY, "max": maxY};
 	};
 
 	redraw(dataset) {
 		this.clearCanvas();
-		this.lines = {};
-		this.yPoints = [];
-		this.xPoints = [];
+		Object.values(this.lines).forEach(function (el) {
+			el.clean();
+		});
 		this.plot(dataset);
 	}
 
 	clearCanvas() {
+		this.ctx.closePath();
 		this.ctx.setTransform(1, 0, 0, 1, 0, 0);
 		this.ctx.clearRect(0, 0, this.w, this.h);
 		this.ctx.beginPath();
@@ -118,17 +141,25 @@ class Line {
 		this.points.push(point);
 	}
 
+	clean() {
+		this.points = [];
+	}
+
 	draw() {
 		let pp = this.points[0],
 			np = null;
-		this.ctx.lineWidth = 3;
+		this.ctx.lineWidth = 2;
+		this.ctx.shadowColor = this.color;
+		this.ctx.shadowBlur = 3;
 		this.ctx.strokeStyle = this.color;
-		this.ctx.lineCap = this.ctx.lineJoin = "round";
+		this.ctx.lineJoin = "round";
+		this.ctx.lineCap = "round";
 		this.ctx.beginPath();
 		for (let i = 1; i < this.points.length; i++) {
 			np = this.points[i];
-			this.ctx.moveTo(pp.x, pp.y); // TODO(" Make use of quadratic curves");
-			this.ctx.lineTo(np.x, np.y);
+			this.ctx.moveTo(pp.x, pp.y);
+			pp = midPoint(pp, np);
+			this.ctx.quadraticCurveTo(pp.x, pp.y, np.x, np.y);
 			pp = np;
 		}
 		this.ctx.closePath();
@@ -139,6 +170,7 @@ class Line {
 class Point {
 	constructor(ctx, x, y, label = "", w = 0, h = 0, color = "#000") {
 		this.ctx = ctx;
+		this.ctx.shadowBlur = 0;
 		this.color = color;
 		this.label = label;
 		this.xShift = this.ctx.measureText(label).width / 2;
