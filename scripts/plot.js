@@ -1,17 +1,6 @@
-function map(num, in_min, in_max, out_min, out_max) {
-	return (num - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
-function midPoint(p1, p2) {
-	return {
-		x: p1.x + (p2.x - p1.x) / 2,
-		y: p1.y + (p2.y - p1.y) / 2
-	};
-}
-
 class Plot {
 	constructor(canvas, types, names, colors, xAxis, labelFormat) {
-		this.ctx = canvas.getContext("2d");//TODO("Clean up, not all parameters are required to be in this object");
+		this.ctx = canvas.getContext("2d"); //TODO("Clean up here, not all members are actually required to be in this object");
 		this.padding = 50;
 		this.h = canvas.height;
 		this.w = canvas.width;
@@ -19,10 +8,10 @@ class Plot {
 		this.names = names;
 		this.types = types;
 		this.xAxis = xAxis;
-		this.yPoints = [];
 		this.lines = {};
 		this.xLimit = 10;
 		this.yLimit = 10;
+		this.dataset = null; // TODO ("In the code I am passing around dataset too much, that's probably redundant");
 
 		let keys = Object.keys(types);
 		for (let i = 0; i < keys.length; i++) {
@@ -31,29 +20,25 @@ class Plot {
 	};
 
 	plot(dataset) {
-		if (!this.validate())
-			return false;
+		this.dataset = dataset;
+		let mM_y = this.drawYAxis(),
+			step = (this.xAxis.length - 1) / this.xLimit,
+			count = 0,
+			labelValue = 0,
+			label = "",
+			point = null,
+			x = this.xAxis;
 
-		let yVal = this.drawYAxis(dataset);
-		let dif = (this.xAxis.length - 1) / this.xLimit;
-		let count = 0;
-
-		for (let i = 0; i < this.xAxis.length; ++i){
-			let lab = "";
-			if (i === Math.round(count * dif)) {
-				lab = this.getLabel(this.xAxis[i]);
+		for (let i = 0; i < x.length; ++i) {
+			label = "";
+			if (i === Math.round(count * step)) {
+				label = this.formatLabel(x[i]);
 				++count;
 			}
-
-			let value = map(this.xAxis[i], this.xAxis[0], this.xAxis[this.xAxis.length - 1], this.padding, this.w - this.padding); // TODO ( " instead of statical padding 50 something else should be done");
-			let point = new Point(this.ctx, value, this.h - 10, lab);
+			labelValue = map(x[i], x[0], x[x.length - 1], this.padding, this.w - this.padding);
+			point = new Point(this.ctx, labelValue, this.h - 10, label);
 			point.draw();
-
-			for (let j = 0; j < dataset.length; ++j) {
-				let name = dataset[j][0];
-				let entity = map(dataset[j][i + 1], yVal.min, yVal.max, this.h - this.padding, this.padding);
-				this.lines[name].addPoint(new Point(this.ctx, value, entity)); // TODO(" I am adding each point from one array to another this can be optimised, do it");
-			}
+			this.updateLines(i, mM_y, labelValue);
 		}
 
 		Object.values(this.lines).forEach(function (el) {
@@ -64,30 +49,45 @@ class Plot {
 	animateDraw(dataset) {
 		let axis = this.xAxis;
 		this.xAxis = [];
-		let drawing = setInterval(function () { // TODO("Dataset must be dynamically moving, or some argument can be passed to the Line class so it will push outdated points")
-			arguments[0].xAxis.push(axis.shift());
-			arguments[0].redraw(dataset);
+		animateFunction(function () {
+			args[0].xAxis.push(axis.shift());
+			args[0].redraw(dataset);
 			if (axis.length === 0)
-				clearInterval(drawing);
-		}, 50, this);
+				finish();
+		}, 60, this);
 	}
 
-	drawYAxis(dataset) {
+	drawYAxis() {
 		let minY = Infinity,
 			maxY = -Infinity;
-		dataset.forEach(function (numbers) {
+		this.dataset.forEach(function (numbers) {
 			numbers.slice(1).forEach(function (num) {
 				minY = Math.min(minY, num);
 				maxY = Math.max(maxY, num);
 			});
 		});
-		let dif = (maxY - minY) / this.yLimit;
+
+		let dif = (maxY - minY) / this.yLimit,
+			val = 0,
+			point = null;
 		for (let i = 0; i <= this.yLimit; i++) {
-			let val = map(minY + dif * i, minY, maxY, this.h - this.padding, this.padding);
-			let point = new Point(this.ctx, 10, val + 10, Math.round(minY + i * dif));
+			val = map(minY + dif * i, minY, maxY, this.h - this.padding, this.padding);
+			point = new Point(this.ctx, 10, val + 10, Math.round(minY + i * dif));
 			point.draw();
 		}
+
 		return {"min": minY, "max": maxY};
+	};
+
+	updateLines(i, mM_y, labelValue) {
+		let name = "",
+			value = null;
+
+		for (let j = 0; j < this.dataset.length; ++j) {
+			name = this.dataset[j][0];
+			value = map(this.dataset[j][i + 1], mM_y.min, mM_y.max, this.h - this.padding, this.padding);
+			this.lines[name].addPoint(new Point(this.ctx, labelValue, value)); // TODO(" I am adding each point from one array to another this can be optimised, do it");
+		}
 	};
 
 	redraw(dataset) {
@@ -119,13 +119,14 @@ class Plot {
 		return message === "";
 	};
 
-	getLabel(item) {
+	formatLabel(item) {
 		let lab = null;
-		if (this.labelFormat === "Date")
+		if (this.labelFormat === "Date") {
 			lab = new Date(item).toLocaleDateString("en-US", {
 				day: "numeric",
 				month: "short"
 			});
+		}
 		return lab;
 	}
 }
@@ -148,9 +149,9 @@ class Line {
 	draw() {
 		let pp = this.points[0],
 			np = null;
-		this.ctx.lineWidth = 2;
+		this.ctx.lineWidth = 3; // TODO("Make everything here dynamic")
 		this.ctx.shadowColor = this.color;
-		this.ctx.shadowBlur = 3;
+		this.ctx.shadowBlur = 4;
 		this.ctx.strokeStyle = this.color;
 		this.ctx.lineJoin = "round";
 		this.ctx.lineCap = "round";
