@@ -1,26 +1,29 @@
 class Plot {
-	constructor(canvas, types, names, colors, xAxis, labelFormat) {
+	constructor(canvas, types, names, colors, xAxis, dataset, labelFormat) {
 		this.ctx = canvas.getContext("2d"); //TODO("Clean up here, not all members are actually required to be in this object");
 		this.padding = 50;
 		this.h = canvas.height;
 		this.w = canvas.width;
+		this.mainH = {"min": 5, "max": this.h * 0.85};
+		this.sliderH = {"min": this.mainH.max + 5, "max": this.h - 5};
 		this.labelFormat = labelFormat;
 		this.names = names;
 		this.types = types;
 		this.xAxis = xAxis;
 		this.lines = {};
+		this.sliderLines = {};
 		this.xLimit = 10;
 		this.yLimit = 10;
-		this.dataset = null; // TODO ("In the code I am passing around dataset too much, that's probably redundant");
+		this.dataset = dataset;
 
 		let keys = Object.keys(types);
 		for (let i = 0; i < keys.length; i++) {
-			this.lines[keys[i]] = new Line(this.ctx, colors[keys[i]]);
+			this.lines[keys[i]] = new Line(this.ctx, colors[keys[i]], 2);
+			this.sliderLines[keys[i]] = new Line(this.ctx, colors[keys[i]], 1);
 		}
 	};
 
-	plot(dataset) {
-		this.dataset = dataset;
+	plot() {
 		let mM_y = this.drawYAxis(),
 			step = (this.xAxis.length - 1) / this.xLimit,
 			count = 0,
@@ -35,23 +38,28 @@ class Plot {
 				label = this.formatLabel(x[i]);
 				++count;
 			}
-			labelValue = map(x[i], x[0], x[x.length - 1], this.padding, this.w - this.padding);
-			point = new Point(this.ctx, labelValue, this.h - 10, label);
+			labelValue = map(x[i], x[0], x[x.length - 1], this.padding, this.w - 20);
+			point = new Point(this.ctx, labelValue, this.mainH.max, label);
 			point.draw();
-			this.updateLines(i, mM_y, labelValue);
+			this.updateLines(this.lines, i, mM_y, this.mainH.min, this.mainH.max - 20, labelValue);
+			this.updateLines(this.sliderLines, i, mM_y, this.sliderH.min, this.sliderH.max, labelValue);
 		}
 
-		Object.values(this.lines).forEach(function (el) {
-			el.draw();
+		[].concat(Object.values(this.lines), Object.values(this.sliderLines)).forEach(function (value) {
+			value.draw();
 		});
 	};
 
-	animateDraw(dataset) {
-		let axis = this.xAxis;
+	animateDraw() {
+		let axis = this.xAxis.double(); // TODO("Something happens here because of which the x labels do not behave normally");
+		let dataset = this.dataset.map((data) => data.slice(1).double());
+		this.dataset = this.dataset.map((data) => [data[0]]);
 		this.xAxis = [];
 		animateFunction(function () {
 			args[0].xAxis.push(axis.shift());
-			args[0].redraw(dataset);
+			for (let i = 0; i < dataset.length; i++)
+				args[0].dataset[i].push(dataset[i].shift());
+			args[0].redraw();
 			if (axis.length === 0)
 				finish();
 		}, 60, this);
@@ -71,53 +79,38 @@ class Plot {
 			val = 0,
 			point = null;
 		for (let i = 0; i <= this.yLimit; i++) {
-			val = map(minY + dif * i, minY, maxY, this.h - this.padding, this.padding);
-			point = new Point(this.ctx, 10, val + 10, Math.round(minY + i * dif));
+			val = map(minY + dif * i, minY, maxY, this.mainH.max - 20, this.mainH.min + 10);
+			point = new Point(this.ctx, 10, val, Math.round(minY + i * dif));
 			point.draw();
 		}
 
 		return {"min": minY, "max": maxY};
 	};
 
-	updateLines(i, mM_y, labelValue) {
+	updateLines(lines, i, mM_y, top, bottom, labelValue) {
 		let name = "",
 			value = null;
 
 		for (let j = 0; j < this.dataset.length; ++j) {
 			name = this.dataset[j][0];
-			value = map(this.dataset[j][i + 1], mM_y.min, mM_y.max, this.h - this.padding, this.padding);
-			this.lines[name].addPoint(new Point(this.ctx, labelValue, value)); // TODO(" I am adding each point from one array to another this can be optimised, do it");
+			value = map(this.dataset[j][i + 1], mM_y.min, mM_y.max, bottom, top);
+			lines[name].addPoint(new Point(this.ctx, labelValue, value)); // TODO(" I am adding each point from one array to another this can be optimised, do it");
 		}
 	};
 
-	redraw(dataset) {
+	redraw() {
 		this.clearCanvas();
-		Object.values(this.lines).forEach(function (el) {
-			el.clean();
+		[].concat(Object.values(this.lines), Object.values(this.sliderLines)).forEach(function (value) {
+			value.clean();
 		});
-		this.plot(dataset);
+		this.plot();
 	}
 
 	clearCanvas() {
-		this.ctx.closePath();
 		this.ctx.setTransform(1, 0, 0, 1, 0, 0);
 		this.ctx.clearRect(0, 0, this.w, this.h);
 		this.ctx.beginPath();
 	}
-
-	validate () {
-		let message = "";
-		if (this.names === null)
-			message += "Please specify names\n";
-		if (this.types === null)
-			message += "Please specify line types\n";
-		if (this.xAxis === null)
-			message += "Please specify xAxis\n";
-		// TODO (Add checks for the cases when labels and types do not match);
-
-//		console.error(message); //TODO("Show error message efficiently if possible");
-		return message === "";
-	};
 
 	formatLabel(item) {
 		let lab = null;
@@ -132,9 +125,10 @@ class Plot {
 }
 
 class Line {
-	constructor(ctx, color) {
+	constructor(ctx, color, lineW) {
 		this.ctx = ctx;
 		this.points = [];
+		this.lineW = lineW;
 		this.color = color;
 	}
 
@@ -149,13 +143,10 @@ class Line {
 	draw() {
 		let pp = this.points[0],
 			np = null;
-		this.ctx.lineWidth = 3; // TODO("Make everything here dynamic")
-		this.ctx.shadowColor = this.color;
-		this.ctx.shadowBlur = 4;
-		this.ctx.strokeStyle = this.color;
-		this.ctx.lineJoin = "round";
-		this.ctx.lineCap = "round";
 		this.ctx.beginPath();
+		this.ctx.lineWidth = this.lineW; // TODO("Make everything here dynamic")
+		this.ctx.strokeStyle = this.color;
+		this.ctx.lineJoin = this.ctx.lineCap = "round";
 		for (let i = 1; i < this.points.length; i++) {
 			np = this.points[i];
 			this.ctx.moveTo(pp.x, pp.y);
@@ -163,13 +154,13 @@ class Line {
 			this.ctx.quadraticCurveTo(pp.x, pp.y, np.x, np.y);
 			pp = np;
 		}
-		this.ctx.closePath();
 		this.ctx.stroke();
+		this.ctx.closePath();
 	};
 }
 
 class Point {
-	constructor(ctx, x, y, label = "", w = 0, h = 0, color = "#000") {
+	constructor(ctx, x, y, label = "", w = 0, h = 0, color = "#353535") {
 		this.ctx = ctx;
 		this.ctx.shadowBlur = 0;
 		this.color = color;
@@ -186,14 +177,10 @@ class Point {
 		this.ctx.beginPath();
 		this.ctx.ellipse(this.x, this.y, this.w, this.h, 0, 0, 2 * Math.PI);
 		this.ctx.fillStyle = this.color;
+		this.ctx.textAlign = "center";
+		this.ctx.font = "bold 10pt Arial";
 		this.ctx.fill();
-		this.ctx.fillText(this.label, this.x - this.xShift, this.y - this.yShift);
+		this.ctx.fillText(this.label, this.x, this.y);
 		this.ctx.closePath();
-	}
-
-	updatePos(x, y) {
-		this.x = x;
-		this.y = y;
-		this.draw();
 	}
 }

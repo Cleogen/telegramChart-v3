@@ -18,3 +18,12 @@ function animateFunction(callback, frameRate, ...args) {
 		callback();
 	}, 1000 / frameRate);
 }
+
+Array.prototype.double = function () {
+	let l = this.length;
+	for (let i = 1; i < l; i += 2) {
+		this.splice(i, 0, parseInt((this[i - 1] + this[i]) / 2));
+	}
+	return this;
+};
+

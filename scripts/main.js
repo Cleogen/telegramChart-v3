@@ -119,10 +119,7 @@ const plot = new Plot(
             1551916800000,
 		1552003200000
 	],
-	"Date"
-);
-plot.animateDraw([
-	[
+	[[
 		"y0",
 		37,
 		20,
@@ -236,8 +233,7 @@ plot.animateDraw([
 		124,
 		114,
 		64
-	],
-	[
+	], [
 		"y1",
 		22,
 		12,
@@ -351,4 +347,7 @@ plot.animateDraw([
 		50,
 		73,
 		52
-	]]);
+	]],
+	"Date"
+);
+plot.animateDraw();
