@@ -50,15 +50,15 @@ class Plot {
 	};
 
 	animateDraw() {
-		let axis = this.xAxis; // TODO("Something happens here when double() because of which the x labels do not behave normally");
-		let dataset = this.dataset.map((data) => data.slice(1));
+		let axis = this.xAxis.double();
+		let dataset = this.dataset.map((data) => data.slice(1).double());
 		this.dataset = this.dataset.map((data) => [data[0]]);
 		this.xAxis = [];
 		animateFunction(function () {
-			args[0].xAxis.push(axis.shift());
+			obj.xAxis.push(axis.shift());
 			for (let i = 0; i < dataset.length; i++)
-				args[0].dataset[i].push(dataset[i].shift());
-			args[0].redraw();
+				obj.dataset[i].push(dataset[i].shift());
+			obj.redraw();
 			if (axis.length === 0)
 				finish();
 		}, 60, this);
