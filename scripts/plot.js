@@ -4,7 +4,7 @@ class Plot {
 		this.h = canvas.height;
 		this.w = canvas.width;
 		this.mainC = {"minH": 5, "maxH": this.h * 0.85, "minW": 50, "maxW": this.w - 20};
-		this.sliderC = {"minH": this.mainC.max + 5, "maxH": this.h - 5, "minW": 50, "maxW": this.w - 20};
+		this.sliderC = {"minH": this.mainC.maxH + 5, "maxH": this.h - 5, "minW": 50, "maxW": this.w - 20};
 		this.labelFormat = labelFormat;
 		this.names = names;
 		this.types = types;

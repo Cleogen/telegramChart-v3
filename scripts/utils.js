@@ -27,3 +27,13 @@ Array.prototype.double = function () {
 	return this;
 };
 
+const Pair = function Pair(first, second) {
+	this.key = first;
+	this.value = second;
+};
+
+Array.prototype.getWithKey = function (key) {
+	for (let i = 0; i < this.length; i++)
+		if (this[i].key === key)
+			return this[i];
+};
