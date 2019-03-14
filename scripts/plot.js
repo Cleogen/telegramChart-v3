@@ -44,6 +44,7 @@ class Plot {
 			this.updateLines(this.sliderLines, i, mM_y, this.sliderC.minH, this.sliderC.maxH, labelValue);
 		}
 
+		this.drawSlider();
 		[].concat(Object.values(this.lines), Object.values(this.sliderLines)).forEach(function (value) {
 			value.draw();
 		});
@@ -116,6 +117,13 @@ class Plot {
 		this.ctx.setTransform(1, 0, 0, 1, 0, 0);
 		this.ctx.clearRect(0, 0, this.w, this.h);
 		this.ctx.beginPath();
+	}
+
+	drawSlider() {
+		this.ctx.beginPath();
+		this.ctx.fillStyle = "rgba(0, 255, 255, 0.1)";
+		this.ctx.fillRect(this.sliderC.minW, this.sliderC.minH, this.mainC.maxW - 50, this.sliderC.maxH);
+		this.ctx.closePath();
 	}
 
 	formatLabel(item) {
