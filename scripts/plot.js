@@ -1,19 +1,18 @@
 class Plot {
 	constructor(canvas, types, names, colors, xAxis, dataset, labelFormat) {
 		this.ctx = canvas.getContext("2d"); //TODO("Clean up here, not all members are actually required to be in this object");
-		this.padding = 50;
 		this.h = canvas.height;
 		this.w = canvas.width;
-		this.mainH = {"min": 5, "max": this.h * 0.85};
-		this.sliderH = {"min": this.mainH.max + 5, "max": this.h - 5};
+		this.mainC = {"minH": 5, "maxH": this.h * 0.85, "minW": 50, "maxW": this.w - 20};
+		this.sliderC = {"minH": this.mainC.max + 5, "maxH": this.h - 5, "minW": 50, "maxW": this.w - 20};
 		this.labelFormat = labelFormat;
 		this.names = names;
 		this.types = types;
 		this.xAxis = xAxis;
 		this.lines = {};
 		this.sliderLines = {};
-		this.xLimit = 10;
-		this.yLimit = 10;
+		this.xLimit = 5;
+		this.yLimit = 5;
 		this.dataset = dataset;
 
 		let keys = Object.keys(types);
@@ -38,11 +37,11 @@ class Plot {
 				label = this.formatLabel(x[i]);
 				++count;
 			}
-			labelValue = map(x[i], x[0], x[x.length - 1], this.padding, this.w - 20);
-			point = new Point(this.ctx, labelValue, this.mainH.max, label);
+			labelValue = map(x[i], x[0], x[x.length - 1], this.mainC.minW, this.mainC.maxW);
+			point = new Point(this.ctx, labelValue, this.mainC.maxH, label);
 			point.draw();
-			this.updateLines(this.lines, i, mM_y, this.mainH.min, this.mainH.max - 20, labelValue);
-			this.updateLines(this.sliderLines, i, mM_y, this.sliderH.min, this.sliderH.max, labelValue);
+			this.updateLines(this.lines, i, mM_y, this.mainC.minH, this.mainC.maxH - 20, labelValue);
+			this.updateLines(this.sliderLines, i, mM_y, this.sliderC.minH, this.sliderC.maxH, labelValue);
 		}
 
 		[].concat(Object.values(this.lines), Object.values(this.sliderLines)).forEach(function (value) {
@@ -51,8 +50,8 @@ class Plot {
 	};
 
 	animateDraw() {
-		let axis = this.xAxis.double(); // TODO("Something happens here because of which the x labels do not behave normally");
-		let dataset = this.dataset.map((data) => data.slice(1).double());
+		let axis = this.xAxis; // TODO("Something happens here when double() because of which the x labels do not behave normally");
+		let dataset = this.dataset.map((data) => data.slice(1));
 		this.dataset = this.dataset.map((data) => [data[0]]);
 		this.xAxis = [];
 		animateFunction(function () {
@@ -66,7 +65,7 @@ class Plot {
 	}
 
 	drawYAxis() {
-		let minY = Infinity,
+		let minY = 0,
 			maxY = -Infinity;
 		this.dataset.forEach(function (numbers) {
 			numbers.slice(1).forEach(function (num) {
@@ -77,11 +76,18 @@ class Plot {
 
 		let dif = (maxY - minY) / this.yLimit,
 			val = 0,
-			point = null;
+			point = null,
+			line = null;
+
 		for (let i = 0; i <= this.yLimit; i++) {
-			val = map(minY + dif * i, minY, maxY, this.mainH.max - 20, this.mainH.min + 10);
-			point = new Point(this.ctx, 10, val, Math.round(minY + i * dif));
+			val = map(minY + dif * i, minY, maxY, this.mainC.maxH - 20, this.mainC.minH + 10);
+			point = new Point(this.ctx, 10, val - 2, Math.round(minY + i * dif));
 			point.draw();
+			line = new Line(this.ctx, "#eeeeee", 1);
+			line.points = [
+				new Point(this.ctx, 0, val + 2),
+				new Point(this.ctx, this.mainC.maxW, val + 2)];
+			this.lines["del" + i] = line;
 		}
 
 		return {"min": minY, "max": maxY};
@@ -165,8 +171,6 @@ class Point {
 		this.ctx.shadowBlur = 0;
 		this.color = color;
 		this.label = label;
-		this.xShift = this.ctx.measureText(label).width / 2;
-		this.yShift = 5;
 		this.x = x;
 		this.y = y;
 		this.w = w;
