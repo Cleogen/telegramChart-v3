@@ -31,13 +31,25 @@ Array.prototype.double = function () {
 	return arr;
 };
 
-const Pair = function Pair(first, second) {
-	this.key = first;
-	this.value = second;
-};
-
-Array.prototype.getWithKey = function (key) {
-	for (let i = 0; i < this.length; i++)
-		if (this[i].key === key)
-			return this[i];
-};
+function onTouchAndMove(callback, object, tP) {
+	let dragging = false;
+	object.onmousedown = function (e) {
+		e.preventDefault();
+		e.stopPropagation();
+		e.x = e.pageX;
+		e.y = e.pageY;
+		if ((e.x >= tP.xS && e.x <= tP.xE) && (e.y >= tP.yS && e.y <= tP.yE))
+			dragging = true;
+	};
+	object.onmousemove = function (e) {
+		e.preventDefault();
+		e.stopPropagation();
+		if (dragging)
+			callback(e);
+	};
+	object.onmouseup = function (e) {
+		e.preventDefault();
+		e.stopPropagation();
+		dragging = false;
+	};
+}

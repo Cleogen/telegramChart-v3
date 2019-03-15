@@ -15,6 +15,12 @@ class Plot {
 		this.xLimit = 5;
 		this.yLimit = 5;
 		this.dataset = dataset;
+		onTouchAndMove(function (e) {
+			console.log(e.x, e.y);
+		}, this.ctx.canvas, {
+			"xS": this.sliderP.start, "xE": this.sliderP.start + this.sliderP.len,
+			"yS": this.sliderC.minH, "yE": this.sliderC.maxH
+		});
 
 		let keys = Object.keys(types);
 		for (let i = 0; i < keys.length; i++) {
@@ -45,15 +51,15 @@ class Plot {
 			this.updateLines(this.sliderLines, i, mM_y, this.sliderC.minH, this.sliderC.maxH, labelValue);
 		}
 
-		this.drawSlider();
+		this.drawSlider(); // TODO("I think it would be better if slider lines have been drawn in drawSlider function");
 		[].concat(Object.values(this.lines), Object.values(this.sliderLines)).forEach(function (value) {
-			value.draw();
+			value.draw(); //TODO("The horizontal lines are drawn over the main lines, fix!");
 		});
 	};
 
 	animateDraw() {
-		let axis = this.xAxis.double();
-		let dataset = this.dataset.map((data) => data.slice(1).double());
+		let axis = this.xAxis;
+		let dataset = this.dataset.map((data) => data.slice(1));
 		this.dataset = this.dataset.map((data) => [data[0]]);
 		this.xAxis = [];
 		animateFunction(function () {
