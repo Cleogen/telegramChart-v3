@@ -3,8 +3,9 @@ class Plot {
 		this.ctx = canvas.getContext("2d"); //TODO("Clean up here, not all members are actually required to be in this object");
 		this.h = canvas.height;
 		this.w = canvas.width;
-		this.mainC = {"minH": 5, "maxH": this.h * 0.85, "minW": 50, "maxW": this.w - 20};
-		this.sliderC = {"minH": this.mainC.maxH + 5, "maxH": this.h - 5, "minW": 50, "maxW": this.w - 20};
+		this.mainC = {"minH": 5, "maxH": this.h * 0.85, "minW": 0, "maxW": this.w};
+		this.sliderC = {"minH": this.mainC.maxH + 5, "maxH": this.h - 5, "minW": 0, "maxW": this.w};
+		this.sliderP = {"start": this.sliderC.minW, "len": this.sliderC.maxW - this.sliderC.minW};
 		this.labelFormat = labelFormat;
 		this.names = names;
 		this.types = types;
@@ -17,8 +18,8 @@ class Plot {
 
 		let keys = Object.keys(types);
 		for (let i = 0; i < keys.length; i++) {
-			this.lines[keys[i]] = new Line(this.ctx, colors[keys[i]], 2);
-			this.sliderLines[keys[i]] = new Line(this.ctx, colors[keys[i]], 1);
+			this.lines[keys[i]] = new Line(this.ctx, colors[keys[i]], 3);
+			this.sliderLines[keys[i]] = new Line(this.ctx, colors[keys[i]], 2);
 		}
 	};
 
@@ -33,7 +34,7 @@ class Plot {
 
 		for (let i = 0; i < x.length; ++i) {
 			label = "";
-			if (i === Math.round(count * step)) {
+			if (i === (Math.round(count * step))) { // TODO("Choose the label points so that they wont overlap")
 				label = this.formatLabel(x[i]);
 				++count;
 			}
@@ -113,7 +114,7 @@ class Plot {
 		this.plot();
 	}
 
-	clearCanvas() {
+	clearCanvas() { // TODO ("Use save and restore to be more efficient when animating");
 		this.ctx.setTransform(1, 0, 0, 1, 0, 0);
 		this.ctx.clearRect(0, 0, this.w, this.h);
 		this.ctx.beginPath();
@@ -121,8 +122,12 @@ class Plot {
 
 	drawSlider() {
 		this.ctx.beginPath();
-		this.ctx.fillStyle = "rgba(0, 255, 255, 0.1)";
-		this.ctx.fillRect(this.sliderC.minW, this.sliderC.minH, this.mainC.maxW - 50, this.sliderC.maxH);
+		this.ctx.fillStyle = "rgba(0, 85, 255, 0.1)"; //TODO("Clean Up here");
+		this.ctx.fillRect(this.sliderC.minW, this.sliderC.minH, this.mainC.maxW, this.sliderC.maxH - this.sliderC.minH);
+		this.ctx.fillStyle = "rgba(0, 85, 255, 0.2)";
+		this.ctx.fillRect(this.sliderP.start, this.sliderC.minH, this.sliderP.len, this.sliderC.maxH - this.sliderC.minH);
+		this.ctx.fillStyle = "#FFFFFF";
+		this.ctx.fillRect(this.sliderP.start + 7, this.sliderC.minH + 2, this.sliderP.len - 14, this.sliderC.maxH - this.sliderC.minH - 4);
 		this.ctx.closePath();
 	}
 
