@@ -31,7 +31,7 @@ Array.prototype.double = function () {
 	return arr;
 };
 
-function onTouchAndMove(callback, object, tP) {
+function onTouchAndMove(callback, object, targetP, ...options) {
 	const getPosition = function (e) {
 		let x = 0, y = 0;
 		if (e.touches !== undefined) {
@@ -43,25 +43,33 @@ function onTouchAndMove(callback, object, tP) {
 		}
 		return {"x": x - object.offsetLeft, "y": y - object.offsetTop};
 	};
-	let dragging = false;
+	let dragging = null;
 	object.onmousedown = function (evt) {
 		let e = getPosition(evt);
-		if ((e.x >= tP.xS && e.x <= tP.xE) && (e.y >= tP.yS && e.y <= tP.yE)) {
-			evt.preventDefault();
-			evt.stopPropagation();
-			dragging = true;
+		for (let i = 0; i < targetP.length; i++) {
+			let point = targetP[i][1];
+			if ((e.x >= point.x && e.x <= point.x + point.w) &&
+				(e.y >= point.y && e.y <= point.y + point.h)) {
+				evt.preventDefault();
+				evt.stopPropagation();
+				dragging = targetP[i][0];
+				break;
+			}
 		}
 	};
+	this.args = options;
 	object.onmousemove = function (evt) {
 		let e = getPosition(evt);
-		if (dragging) {
+		if (dragging !== null) {
 			evt.preventDefault();
 			evt.stopPropagation();
-			callback(e);
+			callback(e, dragging);
 		}
 	};
-	object.onmouseup = function () {
-		dragging = false;
+	object.onmouseup = function (evt) {
+		evt.preventDefault();
+		evt.stopPropagation();
+		dragging = null;
 	};
 	object.ontouchstart = (e) => object.onmousedown(e);
 	object.ontouchmove = (e) => object.onmousemove(e);

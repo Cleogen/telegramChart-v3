@@ -1,11 +1,30 @@
 class Plot {
+	ctx;
+	h;
+	w;
+	mainC;
+	sliderC;
+	labelFormat;
+	names;
+	types;
+	xAxis;
+	lines;
+	sliderLines;
+	xLimit;
+	yLimit;
+	dataset;
 	constructor(canvas, types, names, colors, xAxis, dataset, labelFormat) {
 		this.ctx = canvas.getContext("2d"); //TODO("Clean up here, not all members are actually required to be in this object");
 		this.h = canvas.height;
 		this.w = canvas.width;
-		this.mainC = {"minH": 5, "maxH": this.h * 0.85, "minW": 0, "maxW": this.w};
+		this.mainC = {"minH": 5, "maxH": this.h * 0.8, "minW": 5, "maxW": this.w};
 		this.sliderC = {"minH": this.mainC.maxH + 5, "maxH": this.h - 5, "minW": 0, "maxW": this.w};
-		this.sliderP = {"start": this.sliderC.minW, "len": this.sliderC.maxW - this.sliderC.minW};
+		this.slider = [
+			["outer", new Point(this.ctx, this.sliderC.minW, this.sliderC.minH, "", this.sliderC.maxW - this.sliderC.minW, this.sliderC.maxH - this.sliderC.minH, "#bbc6d6", "rect")],
+			["left", new Point(this.ctx, this.sliderC.minW, this.sliderC.minH, "", 7, this.sliderC.maxH - this.sliderC.minH, "#9fa9b9", "rect")],
+			["right", new Point(this.ctx, this.sliderC.maxW - 7, this.sliderC.minH, "", 7, this.sliderC.maxH - this.sliderC.minH, "#9ba8b9", "rect")],
+			["inner", new Point(this.ctx, this.sliderC.minW + 7, this.sliderC.minH + 2, "", this.sliderC.maxW - this.sliderC.minW - 14, this.sliderC.maxH - this.sliderC.minH - 4, "#e6f0ff", "rect")]
+		];
 		this.labelFormat = labelFormat;
 		this.names = names;
 		this.types = types;
@@ -15,17 +34,12 @@ class Plot {
 		this.xLimit = 5;
 		this.yLimit = 5;
 		this.dataset = dataset;
-		onTouchAndMove(function (e) {
-			console.log(e.x, e.y);
-		}, this.ctx.canvas, {
-			"xS": this.sliderP.start, "xE": this.sliderP.start + this.sliderP.len,
-			"yS": this.sliderC.minH, "yE": this.sliderC.maxH
-		});
+		this.configEvents();
 
 		let keys = Object.keys(types);
 		for (let i = 0; i < keys.length; i++) {
-			this.lines[keys[i]] = new Line(this.ctx, colors[keys[i]], 3);
-			this.sliderLines[keys[i]] = new Line(this.ctx, colors[keys[i]], 2);
+			this.lines[keys[i]] = new Line(this.ctx, colors[keys[i]], 2);
+			this.sliderLines[keys[i]] = new Line(this.ctx, colors[keys[i]], 1);
 		}
 	};
 
@@ -51,7 +65,9 @@ class Plot {
 			this.updateLines(this.sliderLines, i, mM_y, this.sliderC.minH, this.sliderC.maxH, labelValue);
 		}
 
-		this.drawSlider(); // TODO("I think it would be better if slider lines have been drawn in drawSlider function");
+		this.slider.map((value => {
+			return value[1]
+		})).forEach((v) => v.draw());
 		[].concat(Object.values(this.lines), Object.values(this.sliderLines)).forEach(function (value) {
 			value.draw(); //TODO("The horizontal lines are drawn over the main lines, fix!");
 		});
@@ -89,7 +105,7 @@ class Plot {
 
 		for (let i = 0; i <= this.yLimit; i++) {
 			val = map(minY + dif * i, minY, maxY, this.mainC.maxH - 20, this.mainC.minH + 10);
-			point = new Point(this.ctx, 10, val - 2, Math.round(minY + i * dif));
+			point = new Point(this.ctx, 15, val - 2, Math.round(minY + i * dif));
 			point.draw();
 			line = new Line(this.ctx, "#eeeeee", 1);
 			line.points = [
@@ -126,17 +142,6 @@ class Plot {
 		this.ctx.beginPath();
 	}
 
-	drawSlider() {
-		this.ctx.beginPath();
-		this.ctx.fillStyle = "rgba(0, 85, 255, 0.1)"; //TODO("Clean Up here");
-		this.ctx.fillRect(this.sliderC.minW, this.sliderC.minH, this.mainC.maxW, this.sliderC.maxH - this.sliderC.minH);
-		this.ctx.fillStyle = "rgba(0, 85, 255, 0.2)";
-		this.ctx.fillRect(this.sliderP.start, this.sliderC.minH, this.sliderP.len, this.sliderC.maxH - this.sliderC.minH);
-		this.ctx.fillStyle = "#FFFFFF";
-		this.ctx.fillRect(this.sliderP.start + 7, this.sliderC.minH + 2, this.sliderP.len - 14, this.sliderC.maxH - this.sliderC.minH - 4);
-		this.ctx.closePath();
-	}
-
 	formatLabel(item) {
 		let lab = null;
 		if (this.labelFormat === "Date") {
@@ -147,7 +152,17 @@ class Plot {
 		}
 		return lab;
 	}
+
+	configEvents() {
+		let drags = this.slider.filter((value) => {
+			return value[0] !== "outer"
+		});
+		onTouchAndMove(function (e, point) {
+
+		}, this.ctx.canvas, drags, this);
+	}
 }
+
 
 class Line {
 	constructor(ctx, color, lineW) {
@@ -185,11 +200,13 @@ class Line {
 }
 
 class Point {
-	constructor(ctx, x, y, label = "", w = 0, h = 0, color = "#353535") {
+	constructor(ctx, x, y, label = "", w = 0, h = 0, color = "#353535", type = "circle", draggable = false) {
+		this.type = type;
 		this.ctx = ctx;
 		this.ctx.shadowBlur = 0;
 		this.color = color;
 		this.label = label;
+		this.draggable = draggable;
 		this.x = x;
 		this.y = y;
 		this.w = w;
@@ -198,11 +215,14 @@ class Point {
 
 	draw() {
 		this.ctx.beginPath();
-		this.ctx.ellipse(this.x, this.y, this.w, this.h, 0, 0, 2 * Math.PI);
+		if (this.type === "circle")
+			this.ctx.ellipse(this.x, this.y, this.w, this.h, 0, 0, 2 * Math.PI);
+		else
+			this.ctx.rect(this.x, this.y, this.w, this.h);
 		this.ctx.fillStyle = this.color;
+		this.ctx.fill();
 		this.ctx.textAlign = "center";
 		this.ctx.font = "bold 10pt Arial";
-		this.ctx.fill();
 		this.ctx.fillText(this.label, this.x, this.y);
 		this.ctx.closePath();
 	}
