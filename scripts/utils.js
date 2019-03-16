@@ -32,24 +32,38 @@ Array.prototype.double = function () {
 };
 
 function onTouchAndMove(callback, object, tP) {
+	const getPosition = function (e) {
+		let x = 0, y = 0;
+		if (e.touches !== undefined) {
+			x = e.touches[0].pageX;
+			y = e.touches[0].pageY;
+		} else {
+			x = e.pageX;
+			y = e.pageY;
+		}
+		return {"x": x - object.offsetLeft, "y": y - object.offsetTop};
+	};
 	let dragging = false;
-	object.onmousedown = function (e) {
-		e.preventDefault();
-		e.stopPropagation();
-		e.x = e.pageX;
-		e.y = e.pageY;
-		if ((e.x >= tP.xS && e.x <= tP.xE) && (e.y >= tP.yS && e.y <= tP.yE))
+	object.onmousedown = function (evt) {
+		let e = getPosition(evt);
+		if ((e.x >= tP.xS && e.x <= tP.xE) && (e.y >= tP.yS && e.y <= tP.yE)) {
+			evt.preventDefault();
+			evt.stopPropagation();
 			dragging = true;
+		}
 	};
-	object.onmousemove = function (e) {
-		e.preventDefault();
-		e.stopPropagation();
-		if (dragging)
+	object.onmousemove = function (evt) {
+		let e = getPosition(evt);
+		if (dragging) {
+			evt.preventDefault();
+			evt.stopPropagation();
 			callback(e);
+		}
 	};
-	object.onmouseup = function (e) {
-		e.preventDefault();
-		e.stopPropagation();
+	object.onmouseup = function () {
 		dragging = false;
 	};
+	object.ontouchstart = (e) => object.onmousedown(e);
+	object.ontouchmove = (e) => object.onmousemove(e);
+	object.ontouchend = (e) => object.onmouseup(e);
 }
