@@ -1,30 +1,10 @@
 class Plot {
-	ctx;
-	h;
-	w;
-	mainC;
-	sliderC;
-	labelFormat;
-	names;
-	types;
-	xAxis;
-	lines;
-	sliderLines;
-	xLimit;
-	yLimit;
-	dataset;
 	constructor(canvas, types, names, colors, xAxis, dataset, labelFormat) {
 		this.ctx = canvas.getContext("2d"); //TODO("Clean up here, not all members are actually required to be in this object");
 		this.h = canvas.height;
 		this.w = canvas.width;
 		this.mainC = {"minH": 5, "maxH": this.h * 0.8, "minW": 5, "maxW": this.w};
-		this.sliderC = {"minH": this.mainC.maxH + 5, "maxH": this.h - 5, "minW": 0, "maxW": this.w};
-		this.slider = [
-			["outer", new Point(this.ctx, this.sliderC.minW, this.sliderC.minH, "", this.sliderC.maxW - this.sliderC.minW, this.sliderC.maxH - this.sliderC.minH, "#bbc6d6", "rect")],
-			["left", new Point(this.ctx, this.sliderC.minW, this.sliderC.minH, "", 7, this.sliderC.maxH - this.sliderC.minH, "#9fa9b9", "rect")],
-			["right", new Point(this.ctx, this.sliderC.maxW - 7, this.sliderC.minH, "", 7, this.sliderC.maxH - this.sliderC.minH, "#9ba8b9", "rect")],
-			["inner", new Point(this.ctx, this.sliderC.minW + 7, this.sliderC.minH + 2, "", this.sliderC.maxW - this.sliderC.minW - 14, this.sliderC.maxH - this.sliderC.minH - 4, "#e6f0ff", "rect")]
-		];
+		this.sliderC = {"minH": this.mainC.maxH + 5, "maxH": this.h - 5, "minW": 5, "maxW": this.w};
 		this.labelFormat = labelFormat;
 		this.names = names;
 		this.types = types;
@@ -34,8 +14,10 @@ class Plot {
 		this.xLimit = 5;
 		this.yLimit = 5;
 		this.dataset = dataset;
-		this.configEvents();
-
+		this.slider = new Slider(this.ctx,
+			{"x": this.sliderC.minW, "y": this.sliderC.minH},
+			{"x": this.sliderC.maxW, "y": this.sliderC.maxH},
+			10, this.updateRange, this);
 		let keys = Object.keys(types);
 		for (let i = 0; i < keys.length; i++) {
 			this.lines[keys[i]] = new Line(this.ctx, colors[keys[i]], 2);
@@ -43,7 +25,7 @@ class Plot {
 		}
 	};
 
-	plot() {
+	plot(s = 0, e = this.xAxis.length) {
 		let mM_y = this.drawYAxis(),
 			step = (this.xAxis.length - 1) / this.xLimit,
 			count = 0,
@@ -52,7 +34,7 @@ class Plot {
 			point = null,
 			x = this.xAxis;
 
-		for (let i = 0; i < x.length; ++i) {
+		for (let i = s; i < e; ++i) {
 			label = "";
 			if (i === (Math.round(count * step))) { // TODO("Choose the label points so that they wont overlap")
 				label = this.formatLabel(x[i]);
@@ -65,9 +47,7 @@ class Plot {
 			this.updateLines(this.sliderLines, i, mM_y, this.sliderC.minH, this.sliderC.maxH, labelValue);
 		}
 
-		this.slider.map((value => {
-			return value[1]
-		})).forEach((v) => v.draw());
+		this.slider.draw();
 		[].concat(Object.values(this.lines), Object.values(this.sliderLines)).forEach(function (value) {
 			value.draw(); //TODO("The horizontal lines are drawn over the main lines, fix!");
 		});
@@ -88,6 +68,12 @@ class Plot {
 		}, 60, this);
 	}
 
+	updateRange(start, end, me) {
+		let s = parseInt(map(start, me.sliderC.minW, me.sliderC.maxW, 1, me.xAxis.length));
+		let e = parseInt(map(end, me.sliderC.minW, me.sliderC.maxW, 1, me.xAxis.length));
+		console.log(s, e);
+		me.redraw(s, e);
+	}
 	drawYAxis() {
 		let minY = 0,
 			maxY = -Infinity;
@@ -128,12 +114,12 @@ class Plot {
 		}
 	};
 
-	redraw() {
+	redraw(s, e) {
 		this.clearCanvas();
 		[].concat(Object.values(this.lines), Object.values(this.sliderLines)).forEach(function (value) {
 			value.clean();
 		});
-		this.plot();
+		this.plot(s, e);
 	}
 
 	clearCanvas() { // TODO ("Use save and restore to be more efficient when animating");
@@ -152,17 +138,7 @@ class Plot {
 		}
 		return lab;
 	}
-
-	configEvents() {
-		let drags = this.slider.filter((value) => {
-			return value[0] !== "outer"
-		});
-		onTouchAndMove(function (e, point) {
-
-		}, this.ctx.canvas, drags, this);
-	}
 }
-
 
 class Line {
 	constructor(ctx, color, lineW) {
@@ -184,8 +160,8 @@ class Line {
 		let pp = this.points[0],
 			np = null;
 		this.ctx.beginPath();
-		this.ctx.lineWidth = this.lineW; // TODO("Make everything here dynamic")
-		this.ctx.strokeStyle = this.color;
+		this.ctx.lineWidth = this.lineW; // TODO("Make everything here dynamic");
+		this.ctx.strokeStyle = this.color; // TODO("Animate drawing lines");
 		this.ctx.lineJoin = this.ctx.lineCap = "round";
 		for (let i = 1; i < this.points.length; i++) {
 			np = this.points[i];
@@ -200,13 +176,12 @@ class Line {
 }
 
 class Point {
-	constructor(ctx, x, y, label = "", w = 0, h = 0, color = "#353535", type = "circle", draggable = false) {
+	constructor(ctx, x, y, label = "", w = 0, h = 0, color = "#353535", type = "circle") {
 		this.type = type;
 		this.ctx = ctx;
 		this.ctx.shadowBlur = 0;
 		this.color = color;
 		this.label = label;
-		this.draggable = draggable;
 		this.x = x;
 		this.y = y;
 		this.w = w;
@@ -226,4 +201,56 @@ class Point {
 		this.ctx.fillText(this.label, this.x, this.y);
 		this.ctx.closePath();
 	}
+}
+
+class Slider {
+	constructor(ctx, start, end, pusherWidth, callback, caller, colors = ["#d7e1e8", "#959fa6", "#ffffff"]) {
+		this.fun = callback;
+		this.obj = caller;
+		let h = end.y - start.y;
+		// TODO("Instead of having 2 left and right points, I shall have one dark from left to right. left and right should be json objects I really need only x,y,w,h: no need to draw")
+		this.outer = new Point(ctx, start.x, start.y, "", end.x - start.x, h, colors[0], "rect");
+		this.right = new Point(ctx, 0, start.y, "", pusherWidth, h, colors[1], "rect");
+		this.left = new Point(ctx, 0, start.y, "", pusherWidth, h, colors[1], "rect");
+		this.inner = new Point(ctx, 0, start.y + 4, "", 0, h - 8, colors[2], "rect");
+		this.recalculate(this.outer);
+		this.moving = false;
+		onTouchAndMove(this.move, this.inner.ctx.canvas, [this.left, this.right, this.inner], this);
+	};
+
+	move(e, point) {
+		//TODO("Slider is stopping when I am going out of bounds. One solution is not to move if it will be out of range")
+		if (!e.me.moving && e.me.left.x >= e.me.outer.x && e.me.right.x + e.me.right.w <= e.me.outer.x + e.me.outer.w) {
+			e.me.moving = true;
+			point.x += e.x - e.begin.x;
+			e.me.recalculate(point);
+			e.me.fun(e.me.left.x, e.me.right.x + e.me.right.w, e.me.obj);
+			e.me.moving = false;
+		}
+	};
+
+	draw() {
+		this.outer.draw();
+		this.inner.draw();
+		this.left.draw();
+		this.right.draw();
+	};
+
+	recalculate(changed) {
+		if (changed === this.inner) {
+			this.left.x = this.inner.x - this.left.w;
+			this.right.x = this.inner.x + this.inner.w;
+		} else if (changed === this.left) {
+			this.inner.x = this.left.x + this.left.w;
+			this.inner.w = this.right.x - this.inner.x;
+		} else if (changed === this.right) {
+			this.inner.w = this.right.x - this.inner.x;
+		} else if (changed === this.outer) {
+			this.left.x = this.outer.x;
+			this.right.x = this.outer.x + this.outer.w - this.right.w;
+			this.inner.x = this.left.x + this.left.w;
+			this.inner.w = this.right.x - this.inner.x;
+		}
+	};
+
 }

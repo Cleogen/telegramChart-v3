@@ -31,7 +31,7 @@ Array.prototype.double = function () {
 	return arr;
 };
 
-function onTouchAndMove(callback, object, targetP, ...options) {
+function onTouchAndMove(callback, object, targetP, caller) {
 	const getPosition = function (e) {
 		let x = 0, y = 0;
 		if (e.touches !== undefined) {
@@ -44,26 +44,32 @@ function onTouchAndMove(callback, object, targetP, ...options) {
 		return {"x": x - object.offsetLeft, "y": y - object.offsetTop};
 	};
 	let dragging = null;
+	let begin = {};
 	object.onmousedown = function (evt) {
 		let e = getPosition(evt);
 		for (let i = 0; i < targetP.length; i++) {
-			let point = targetP[i][1];
+			let point = targetP[i];
 			if ((e.x >= point.x && e.x <= point.x + point.w) &&
 				(e.y >= point.y && e.y <= point.y + point.h)) {
 				evt.preventDefault();
 				evt.stopPropagation();
-				dragging = targetP[i][0];
+				dragging = targetP[i];
+				begin.x = e.x;
+				begin.y = e.y;
 				break;
 			}
 		}
 	};
-	this.args = options;
 	object.onmousemove = function (evt) {
 		let e = getPosition(evt);
 		if (dragging !== null) {
 			evt.preventDefault();
 			evt.stopPropagation();
+			e.begin = begin;
+			e.me = caller;
 			callback(e, dragging);
+			begin.x = e.x;
+			begin.y = e.y;
 		}
 	};
 	object.onmouseup = function (evt) {
