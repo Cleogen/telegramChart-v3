@@ -6,6 +6,7 @@ class Plot {
 		this.ctx.imageSmoothingQuality = "high";
 		this.h = canvas.height;
 		this.w = canvas.width;
+		this.animating = false;
 		this.mainC = {"minY": 15, "maxY": this.h * 0.8, "minX": 15, "maxX": this.w};
 		this.sliderC = {
 			"minY": this.mainC.maxY + 5,
@@ -18,7 +19,6 @@ class Plot {
 		this.types = types;
 		this.xAxis = xAxis;
 		this.lines = [];
-		this.colors = colors;
 		this.staticLines = [];
 		this.sliderLines = [];
 		this.labels = [];
@@ -79,32 +79,29 @@ class Plot {
 	};
 
 	draw() {
+		this.animating = false;
 		this.clearCanvas();
 		this.slider.draw();
 		this.slider.update();
 		this.labels.forEach((label) => {
 			label.draw();
-			label.update();
-		});
+			this.animating |= label.update();
+		}, this);
 		this.staticLines.forEach((line) => {
 			line.draw();
-			line.update();
-		});
+			this.animating |= line.update();
+		}, this);
 		this.sliderLines.forEach((line) => {
 			line.draw();
-			line.update();
-		});
+			this.animating |= line.update();
+		}, this);
 		this.lines.forEach((line) => {
 			line.draw();
-			line.update();
-		});
-		this.update();
-		requestAnimationFrame(this.draw.bind(this));
+			this.animating |= line.update();
+		}, this);
+		if (this.animating)
+			requestAnimationFrame(this.draw.bind(this));
 	};
-
-	update() {
-
-	}
 
 	clearCanvas() {
 		this.ctx.save();
@@ -121,8 +118,6 @@ class Plot {
 		this.mainC.minX = map(this.sliderC.minX, start, end, this.sliderC.minX, this.sliderC.maxX);
 		this.mainC.maxX = map(this.sliderC.maxX, start, end, this.sliderC.minX, this.sliderC.maxX);
 		let dataset = this.dataset;
-		let colors = this.colors;
-
 		let minY = 0;
 		let maxY = -Infinity;
 		for (let i = 0; i < dataset.length; ++i) {
@@ -141,8 +136,8 @@ class Plot {
 			line.points[1].setY(value);
 		}
 
-		let minX = xAxis[1];
-		let maxX = xAxis[xAxis.length - 2];
+		let minX = xAxis[0];
+		let maxX = xAxis[xAxis.length - 1];
 		step = (maxX - minX) / (this.xLimit - 1);
 		for (let i = 0; i < this.xLimit; ++i) {
 			let p = minX + step * i;
@@ -159,6 +154,8 @@ class Plot {
 				line.points[j - 1].set(x, y);
 			}
 		}
+		if (!this.animating)
+			this.draw();
 	}
 
 	formatLabel(item) {
@@ -189,10 +186,12 @@ class Line {
 	}
 
 	update() {
+		let it = true;
 		this.points.forEach((point) => {
 			point.draw();
-			point.update()
+			it &= point.update()
 		});
+		return it;
 	}
 
 	setRange(start, end) {
@@ -255,7 +254,9 @@ class Point {
 			this.x += this.stepX;
 			this.y += this.stepY;
 			--this.count;
+			return true;
 		}
+		return false;
 	}
 
 	draw() {
