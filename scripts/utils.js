@@ -31,6 +31,18 @@ Array.prototype.double = function () {
 	return arr;
 };
 
+function getMinMax(data) {
+	let min = 0;
+	let max = -Infinity;
+	for (let i = 0; i < data.length; i++) {
+		if (Array.isArray(data[i])) {
+
+		} else {
+
+		}
+	}
+}
+
 function onTouchAndMove(callback, object, targetP, caller) {
 	const getPosition = function (e) {
 		let x = 0, y = 0;
@@ -44,6 +56,7 @@ function onTouchAndMove(callback, object, targetP, caller) {
 		return {"x": x - object.offsetLeft, "y": y - object.offsetTop};
 	};
 	let dragging = null;
+	let func = callback.bind(caller);
 	let begin = {};
 	object.onmousedown = function (evt) {
 		let e = getPosition(evt);
@@ -66,8 +79,7 @@ function onTouchAndMove(callback, object, targetP, caller) {
 			evt.preventDefault();
 			evt.stopPropagation();
 			e.begin = begin;
-			e.me = caller;
-			callback(e, dragging);
+			func(e, dragging);
 			begin.x = e.x;
 			begin.y = e.y;
 		}

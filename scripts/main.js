@@ -350,4 +350,3 @@ const plot = new Plot(
 	]],
 	"Date"
 );
-plot.plot();
