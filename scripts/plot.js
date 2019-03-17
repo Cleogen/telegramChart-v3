@@ -1,4 +1,4 @@
-const animationStep = 1;
+const animationStep = 5;
 
 class Plot {
 	constructor(canvas, types, names, colors, xAxis, dataset, labelFormat) {
@@ -115,24 +115,24 @@ class Plot {
 	}
 
 	updateRange(start, end) {
-		let s = Math.round(map(start.after, this.sliderC.minX, this.sliderC.maxX, 0, this.xAxis.length - 1));
-		let e = Math.round(map(end.after, this.sliderC.minX, this.sliderC.maxX, 0, this.xAxis.length - 1));
-		this.mainC.minX -= start.after - start.before;
-		this.mainC.maxX -= end.after - end.before;
+		let s = Math.floor(map(start, this.sliderC.minX, this.sliderC.maxX, 0, this.xAxis.length - 1));
+		let e = Math.ceil(map(end, this.sliderC.minX, this.sliderC.maxX, 0, this.xAxis.length - 1));
 		let xAxis = this.xAxis.slice(s, e);
+		this.mainC.minX = map(this.sliderC.minX, start, end, this.sliderC.minX, this.sliderC.maxX);
+		this.mainC.maxX = map(this.sliderC.maxX, start, end, this.sliderC.minX, this.sliderC.maxX);
 		let dataset = this.dataset;
 		let colors = this.colors;
 
 		let minY = 0;
 		let maxY = -Infinity;
 		for (let i = 0; i < dataset.length; ++i) {
-			for (let j = 1; j < dataset[i].length; ++j) {
+			for (let j = s + 1; j < e; ++j) {
 				minY = Math.min(minY, dataset[i][j]);
 				maxY = Math.max(maxY, dataset[i][j]);
 			}
 		}
 		let step = (maxY - minY) / (this.yLimit - 1);
-		for (let i = 0; i <= this.yLimit; ++i) {
+		for (let i = 0; i < this.yLimit; ++i) {
 			let line = this.staticLines[i];
 			let p = minY + step * i;
 			let value = map(p, minY, maxY, this.mainC.maxY - 20, this.mainC.minY);
@@ -141,10 +141,10 @@ class Plot {
 			line.points[1].setY(value);
 		}
 
-		let minX = xAxis[2];
+		let minX = xAxis[1];
 		let maxX = xAxis[xAxis.length - 2];
 		step = (maxX - minX) / (this.xLimit - 1);
-		for (let i = 0; i <= this.xLimit; ++i) {
+		for (let i = 0; i < this.xLimit; ++i) {
 			let p = minX + step * i;
 			let value = map(p, xAxis[0], xAxis[xAxis.length - 1], this.sliderC.minX, this.sliderC.maxX);
 			this.labels[i].setX(value);
@@ -290,14 +290,10 @@ class Slider {
 	move(e, point) {
 		//TODO("Slider is stopping when I am going out of bounds. One solution is not to move if it will be out of range")
 		let x = point.x + e.x - e.begin.x;
-		let start = {"before": this.left.x, "after": 0};
-		let end = {"before": this.right.x + this.right.w, "after": 0};
 		if (!this.moving && this.left.x >= this.outer.x && this.right.x + this.right.w <= this.outer.x + this.outer.w) {
 			this.moving = true;
 			this.recalculate(point, x);
-			start.after = this.left.x;
-			end.after = this.right.x + this.right.w;
-			this.fun(start, end);
+			this.fun(this.left.x, this.right.x + this.right.w);
 			this.moving = false;
 		}
 	};
