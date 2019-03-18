@@ -9,40 +9,6 @@ function midPoint(p1, p2) {
 	};
 }
 
-function animateFunction(callback, frameRate, obj) {
-	let again = true;
-	setTimeout(function () {
-		this.finish = function () {
-			again = false;
-		};
-		this.obj = obj;
-		callback();
-		if (again) animateFunction(callback, frameRate, this.obj);
-	}, 1000 / frameRate);
-}
-
-Array.prototype.double = function () {
-	let l = this.length;
-	let arr = [];
-	for (let i = 1; i < l; i++) {
-		arr.push(this[i - 1], (this[i - 1] + this[i]) / 2);
-	}
-	arr.push(this[l - 1]);
-	return arr;
-};
-
-function getMinMax(data) {
-	let min = 0;
-	let max = -Infinity;
-	for (let i = 0; i < data.length; i++) {
-		if (Array.isArray(data[i])) {
-
-		} else {
-
-		}
-	}
-}
-
 function onTouchAndMove(callback, object, targetP, caller) {
 	const getPosition = function (e) {
 		let x = 0, y = 0;
@@ -94,18 +60,48 @@ function onTouchAndMove(callback, object, targetP, caller) {
 	object.ontouchend = (e) => object.onmouseup(e);
 }
 
-function createInput(container, id, name, call, obj) {
-	let label = document.createElement("label");
-	label.innerText = name;
+function createInput(container, id, name, color, call, obj) {
+	let group = document.createElement("div");
+	group.className = "inputGroup";
 	let input = document.createElement("input");
 	input.setAttribute("plot-data", id);
-	input.className = "plot-check";
 	input.checked = true;
 	input.type = "checkbox";
+	input.id = input.name = "check_" + id;
+	let label = document.createElement("label");
+	label.htmlFor = "check_" + id;
+	label.pseudoStyle("after", "background-color", color);
+	let span = document.createElement("span");
+	span.innerText = name;
 	call = call.bind(obj);
 	input.onchange = function () {
 		call(this);
 	};
-	label.appendChild(input);
-	container.appendChild(label);
+	group.appendChild(input);
+	label.appendChild(span);
+	group.appendChild(label);
+	container.appendChild(group);
 }
+
+const UID = {
+	_current: 0,
+	getNew: function () {
+		this._current++;
+		return this._current;
+	}
+};
+
+HTMLElement.prototype.pseudoStyle = function (element, prop, value) {
+	let _this = this;
+	let _sheetId = "pseudoStyles";
+	let _head = document.head || document.getElementsByTagName('head')[0];
+	let _sheet = document.getElementById(_sheetId) || document.createElement('style');
+	_sheet.id = _sheetId;
+	let className = "pseudoStyle" + UID.getNew();
+
+	_this.className += " " + className;
+
+	_sheet.innerHTML += " ." + className + ":" + element + "{" + prop + ":" + value + "}";
+	_head.appendChild(_sheet);
+	return this;
+};

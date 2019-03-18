@@ -65,7 +65,7 @@ class Plot {
 
 		for (let i = 0; i < dataset.length; i++) {
 			let name = dataset[i][0];
-			createInput(container, i, names[name], this.checker, this);
+			createInput(container, i, names[name], colors[name], this.checker, this);
 			let line = new Line(this.ctx, colors[name], 2);
 			let lineS = new Line(this.ctx, colors[name], 1);
 			for (let j = 1; j < dataset[i].length; j++) {
