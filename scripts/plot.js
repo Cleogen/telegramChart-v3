@@ -1,7 +1,11 @@
 const animationStep = 5;
 
 class Plot {
-	constructor(canvas, types, names, colors, xAxis, dataset, labelFormat) {
+	constructor(container, types, names, colors, xAxis, dataset, labelFormat) {
+		let canvas = document.createElement("canvas");
+		canvas.width = container.clientWidth;
+		canvas.height = container.clientHeight * 0.8;
+		container.appendChild(canvas);
 		this.ctx = canvas.getContext("2d"); //TODO("Clean up here, not all members are actually required to be in this object");
 		this.ctx.imageSmoothingQuality = "high";
 		this.h = canvas.height;
@@ -29,7 +33,7 @@ class Plot {
 		this.slider = new Slider(this.ctx,
 			{"x": this.sliderC.minX, "y": this.sliderC.minY},
 			{"x": this.sliderC.maxX, "y": this.sliderC.maxY},
-			10, this.updateRange, this);
+			10, this.update, this);
 
 		let minY = 0;
 		let maxY = -Infinity;
@@ -51,7 +55,7 @@ class Plot {
 		}
 
 		let minX = xAxis[2];
-		let maxX = xAxis[xAxis.length - 2];
+		let maxX = xAxis[xAxis.length - 3];
 		step = (maxX - minX) / (this.xLimit - 1);
 		for (let i = 0; i <= this.xLimit; i++) {
 			let p = minX + step * i;
@@ -61,8 +65,9 @@ class Plot {
 
 		for (let i = 0; i < dataset.length; i++) {
 			let name = dataset[i][0];
-			let line = new Line(this.ctx, colors[name], 3);
-			let lineS = new Line(this.ctx, colors[name], 2);
+			createInput(container, i, names[name], this.checker, this);
+			let line = new Line(this.ctx, colors[name], 2);
+			let lineS = new Line(this.ctx, colors[name], 1);
 			for (let j = 1; j < dataset[i].length; j++) {
 				let x = map(xAxis[j - 1], xAxis[0], xAxis[xAxis.length - 1], this.mainC.minX, this.mainC.maxX);
 				let xS = map(xAxis[j - 1], xAxis[0], xAxis[xAxis.length - 1], this.sliderC.minX, this.sliderC.maxX);
@@ -111,19 +116,28 @@ class Plot {
 		this.ctx.beginPath();
 	}
 
-	updateRange(start, end) {
-		let s = Math.floor(map(start, this.sliderC.minX, this.sliderC.maxX, 0, this.xAxis.length - 1));
-		let e = Math.ceil(map(end, this.sliderC.minX, this.sliderC.maxX, 0, this.xAxis.length - 1));
+	update() {
+		let start = this.slider.getStart();
+		let end = this.slider.getEnd();
+		let s = Math.floor(map(start, this.sliderC.minX, this.sliderC.maxX, 0, this.xAxis.length));
+		let e = Math.ceil(map(end, this.sliderC.minX, this.sliderC.maxX, 0, this.xAxis.length));
 		let xAxis = this.xAxis.slice(s, e);
 		this.mainC.minX = map(this.sliderC.minX, start, end, this.sliderC.minX, this.sliderC.maxX);
 		this.mainC.maxX = map(this.sliderC.maxX, start, end, this.sliderC.minX, this.sliderC.maxX);
-		let dataset = this.dataset;
 		let minY = 0;
 		let maxY = -Infinity;
-		for (let i = 0; i < dataset.length; ++i) {
-			for (let j = s + 1; j < e; ++j) {
-				minY = Math.min(minY, dataset[i][j]);
-				maxY = Math.max(maxY, dataset[i][j]);
+		let sliderMin = 0;
+		let sliderMax = -Infinity;
+		for (let i = 0; i < this.dataset.length; ++i) {
+			if (this.lines[i].state !== Line.ACTIVE)
+				continue;
+			for (let j = 1; j < this.dataset[i].length - 1; ++j) {
+				sliderMin = Math.min(sliderMin, this.dataset[i][j]);
+				sliderMax = Math.max(sliderMax, this.dataset[i][j]);
+				if (j >= s && j <= e) {
+					minY = Math.min(minY, this.dataset[i][j]);
+					maxY = Math.max(maxY, this.dataset[i][j]);
+				}
 			}
 		}
 		let step = (maxY - minY) / (this.yLimit - 1);
@@ -136,8 +150,8 @@ class Plot {
 			line.points[1].setY(value);
 		}
 
-		let minX = xAxis[0];
-		let maxX = xAxis[xAxis.length - 1];
+		let minX = xAxis[2];
+		let maxX = xAxis[xAxis.length - 3];
 		step = (maxX - minX) / (this.xLimit - 1);
 		for (let i = 0; i < this.xLimit; ++i) {
 			let p = minX + step * i;
@@ -146,12 +160,15 @@ class Plot {
 			this.labels[i].label = this.formatLabel(p);
 		}
 
-		for (let i = 0; i < dataset.length; ++i) {
+		for (let i = 0; i < this.dataset.length; ++i) {
 			let line = this.lines[i];
-			for (let j = 1; j < dataset[i].length; ++j) {
+			let sliderLine = this.sliderLines[i];
+			for (let j = 1; j < this.dataset[i].length; ++j) {
 				let x = map(this.xAxis[j - 1], this.xAxis[0], this.xAxis[this.xAxis.length - 1], this.mainC.minX, this.mainC.maxX);
-				let y = map(dataset[i][j], minY, maxY, this.mainC.maxY - 20, this.mainC.minY);
+				let y = map(this.dataset[i][j], minY, maxY, this.mainC.maxY - 20, this.mainC.minY);
+				let yS = map(this.dataset[i][j], sliderMin, sliderMax, this.sliderC.maxY, this.sliderC.minY + 2);
 				line.points[j - 1].set(x, y);
+				sliderLine.points[j - 1].setY(yS);
 			}
 		}
 		if (!this.animating)
@@ -168,11 +185,27 @@ class Plot {
 		}
 		return lab;
 	}
+
+	checker(el) {
+		let id = el.getAttribute("plot-data");
+		if (!el.checked) {
+			this.lines[id].state = Line.HIDDEN;
+			this.sliderLines[id].state = Line.HIDDEN;
+		} else {
+			this.lines[id].state = Line.ACTIVE;
+			this.sliderLines[id].state = Line.ACTIVE;
+		}
+		this.update();
+	}
 }
 
 class Line {
-	constructor(ctx, color, lineW) {
+	static ACTIVE = 1;
+	static HIDDEN = 0;
+
+	constructor(ctx, color, lineW, state = Line.ACTIVE) {
 		this.ctx = ctx;
+		this.state = state;
 		this.points = [];
 		this.lineW = lineW;
 		this.color = color;
@@ -194,12 +227,9 @@ class Line {
 		return it;
 	}
 
-	setRange(start, end) {
-//		this.start = start;
-//		this.end = end;
-	}
-
 	draw() {
+		if (this.state !== Line.ACTIVE)
+			return;
 		let pp = this.points[this.start];
 		this.ctx.beginPath();
 		this.ctx.lineWidth = this.lineW;
@@ -226,8 +256,6 @@ class Point {
 		this.y = y;
 		this.w = w;
 		this.h = h;
-		this.nx = x;
-		this.ny = y;
 		this.stepX = 0;
 		this.stepY = 0;
 		this.count = 0;
@@ -235,8 +263,6 @@ class Point {
 
 	set(x, y) {
 		this.count = animationStep;
-		this.nx = x;
-		this.ny = y;
 		this.stepX = (x - this.x) / animationStep;
 		this.stepY = (y - this.y) / animationStep;
 	}
@@ -294,10 +320,18 @@ class Slider {
 		if (!this.moving && this.left.x >= this.outer.x && this.right.x + this.right.w <= this.outer.x + this.outer.w) {
 			this.moving = true;
 			this.recalculate(point, x);
-			this.fun(this.left.x, this.right.x + this.right.w);
+			this.fun();
 			this.moving = false;
 		}
 	};
+
+	getStart() {
+		return this.left.x;
+	}
+
+	getEnd() {
+		return this.right.x + this.right.w;
+	}
 
 	draw() {
 		this.outer.draw();

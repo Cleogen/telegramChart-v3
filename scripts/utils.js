@@ -93,3 +93,19 @@ function onTouchAndMove(callback, object, targetP, caller) {
 	object.ontouchmove = (e) => object.onmousemove(e);
 	object.ontouchend = (e) => object.onmouseup(e);
 }
+
+function createInput(container, id, name, call, obj) {
+	let label = document.createElement("label");
+	label.innerText = name;
+	let input = document.createElement("input");
+	input.setAttribute("plot-data", id);
+	input.className = "plot-check";
+	input.checked = true;
+	input.type = "checkbox";
+	call = call.bind(obj);
+	input.onchange = function () {
+		call(this);
+	};
+	label.appendChild(input);
+	container.appendChild(label);
+}
