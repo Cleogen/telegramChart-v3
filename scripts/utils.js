@@ -2,11 +2,10 @@ function map(num, in_min, in_max, out_min, out_max) {
 	return (num - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-function midPoint(p1, p2) {
-	return {
-		x: p1.x + (p2.x - p1.x) / 2,
-		y: p1.y + (p2.y - p1.y) / 2
-	};
+function constrain(value, min, max) {
+	if (value < min) return min;
+	if (value > max) return max;
+	return value
 }
 
 function onTouchAndMove(callback, object, targetP, caller) {

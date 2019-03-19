@@ -1,5 +1,11 @@
 * {
 	margin: 0 auto;
+	user-select: none;
+}
+
+.dark-mode {
+	background-color: #232f3d;
+	color: snow;
 }
 
 .plot-check {
@@ -7,20 +13,19 @@
 }
 
 .inputGroup {
-	background-color: #fff;
 	display: inline-block;
 	margin: 10px 5px;
-	width: 150px;
 	position: relative;
 }
 
 .inputGroup label {
 	border-radius: 23px;
+	border: 1px solid darkgrey;
 	padding: 10px 8px;
 	width: 100%;
 	display: block;
 	text-align: left;
-	color: #3C454C;
+	color: rgb(177, 186, 193);
 	cursor: pointer;
 	position: relative;
 	z-index: 2;
@@ -79,7 +84,7 @@
 
 .inputGroup input:checked ~ label:before {
 	background-color: #54E0C7;
-	border-color: #54E0C7;
+	border-color: #ffffff;
 }
 
 .inputGroup input {
@@ -118,8 +123,7 @@ html {
 	box-sizing: border-box;
 }
 
-code {
-	background-color: #9AA3AC;
-	padding: 0 8px;
+#night {
+	color: dodgerblue;
+	cursor: pointer;
 }
-

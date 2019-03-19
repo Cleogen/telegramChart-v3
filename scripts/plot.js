@@ -33,7 +33,7 @@ class Plot {
 		this.slider = new Slider(this.ctx,
 			{"x": this.sliderC.minX, "y": this.sliderC.minY},
 			{"x": this.sliderC.maxX, "y": this.sliderC.maxY},
-			10, this.update, this);
+			12, this.update, this);
 
 		let minY = 0;
 		let maxY = -Infinity;
@@ -44,20 +44,22 @@ class Plot {
 			}
 		}
 		let step = (maxY - minY) / (this.yLimit - 1);
-		for (let i = 0; i <= this.yLimit; i++) {
-			let line = new Line(this.ctx, "#ececec", 1);
+		for (let i = 0; i < this.yLimit; i++) {
+			let line = new Line(this.ctx, "rgba(150,150,150,0.5)", 1);
 			let p = minY + step * i;
 			let value = map(p, minY, maxY, this.mainC.maxY - 20, this.mainC.minY);
-			line.points = [new Point(this.ctx, this.mainC.minX, value, parseInt(p)),
+			line.points = [
+				new Point(this.ctx, this.mainC.minX + this.ctx.measureText(p).width / 2,
+					value, parseInt(p)),
 				new Point(this.ctx, this.mainC.maxX, value)];
 			line.end = 2;
 			this.staticLines.push(line);
 		}
 
-		let minX = xAxis[2];
-		let maxX = xAxis[xAxis.length - 3];
+		let minX = xAxis[parseInt(xAxis.length * 0.05)];
+		let maxX = xAxis[parseInt(xAxis.length * 0.95)];
 		step = (maxX - minX) / (this.xLimit - 1);
-		for (let i = 0; i <= this.xLimit; i++) {
+		for (let i = 0; i < this.xLimit; i++) {
 			let p = minX + step * i;
 			let value = map(p, xAxis[0], xAxis[xAxis.length - 1], this.mainC.minX, this.mainC.maxX);
 			this.labels.push(new Point(this.ctx, value, this.mainC.maxY, this.formatLabel(p)));
@@ -88,6 +90,10 @@ class Plot {
 		this.clearCanvas();
 		this.slider.draw();
 		this.slider.update();
+		this.lines.forEach((line) => {
+			line.draw();
+			this.animating |= line.update();
+		}, this);
 		this.labels.forEach((label) => {
 			label.draw();
 			this.animating |= label.update();
@@ -97,10 +103,6 @@ class Plot {
 			this.animating |= line.update();
 		}, this);
 		this.sliderLines.forEach((line) => {
-			line.draw();
-			this.animating |= line.update();
-		}, this);
-		this.lines.forEach((line) => {
 			line.draw();
 			this.animating |= line.update();
 		}, this);
@@ -150,8 +152,8 @@ class Plot {
 			line.points[1].setY(value);
 		}
 
-		let minX = xAxis[2];
-		let maxX = xAxis[xAxis.length - 3];
+		let minX = xAxis[parseInt(xAxis.length * 0.05)];
+		let maxX = xAxis[parseInt(xAxis.length * 0.95)];
 		step = (maxX - minX) / (this.xLimit - 1);
 		for (let i = 0; i < this.xLimit; ++i) {
 			let p = minX + step * i;
@@ -196,6 +198,27 @@ class Plot {
 			this.sliderLines[id].state = Line.ACTIVE;
 		}
 		this.update();
+	}
+
+	switchMode(el) {
+		if (el.innerHTML.includes("Night")) {
+			document.documentElement.className = "dark-mode";
+			el.innerHTML = "Switch to Day Mode";
+			this.slider.setColors(
+				"#1f2a38",
+				"#40566b",
+				"#242f3e"
+			);
+		} else {
+			document.documentElement.className = "";
+			el.innerHTML = "Switch to Night Mode";
+			this.slider.setColors(
+				"#f5f9fb",
+				"#ddeaf3",
+				"#fff"
+			);
+		}
+		this.draw();
 	}
 }
 
@@ -246,7 +269,7 @@ class Line {
 }
 
 class Point {
-	constructor(ctx, x, y, label = "", w = 0, h = 0, color = "#353535", type = "circle") {
+	constructor(ctx, x, y, label = "", w = 0, h = 0, color = "rgb(177,186,193)", type = "circle") {
 		this.type = type;
 		this.ctx = ctx;
 		this.ctx.shadowBlur = 0;
@@ -301,23 +324,24 @@ class Point {
 }
 
 class Slider {
-	constructor(ctx, start, end, pusherWidth, callback, caller, colors = ["#d7e1e8", "#959fa6", "#ffffff"]) {
+	constructor(ctx, start, end, pusherWidth, callback, caller, colors = ["#f5f9fb", "#ddeaf3", "#ffffff"]) {
 		this.fun = callback.bind(caller);
 		let h = end.y - start.y;
-		// TODO("Instead of having 2 left and right points, I shall have one dark from left to right. left and right should be json objects I really need only x,y,w,h: no need to draw")
+		this.minX = start.x;
+		this.maxX = end.x;
 		this.outer = new Point(ctx, start.x, start.y, "", end.x - start.x, h, colors[0], "rect");
-		this.right = new Point(ctx, 0, start.y, "", pusherWidth, h, colors[1], "rect");
-		this.left = new Point(ctx, 0, start.y, "", pusherWidth, h, colors[1], "rect");
+		this.right = new Point(ctx, 0, start.y, "", pusherWidth, h);
+		this.decor = new Point(ctx, 0, start.y, "", 0, h, colors[1], "rect");
+		this.left = new Point(ctx, 0, start.y, "", pusherWidth, h);
 		this.inner = new Point(ctx, 0, start.y + 4, "", 0, h - 8, colors[2], "rect");
 		this.recalculate(this.outer);
 		this.moving = false;
-		onTouchAndMove(this.move, this.inner.ctx.canvas, [this.left, this.right, this.inner], this);
+		onTouchAndMove(this.move, ctx.canvas, [this.left, this.right, this.inner], this);
 	};
 
 	move(e, point) {
-		//TODO("Slider is stopping when I am going out of bounds. One solution is not to move if it will be out of range")
-		let x = point.x + e.x - e.begin.x;
 		if (!this.moving && this.left.x >= this.outer.x && this.right.x + this.right.w <= this.outer.x + this.outer.w) {
+			let x = point.x + e.x - e.begin.x;
 			this.moving = true;
 			this.recalculate(point, x);
 			this.fun();
@@ -333,31 +357,35 @@ class Slider {
 		return this.right.x + this.right.w;
 	}
 
+	setColors(one, two, three) {
+		this.outer.color = one;
+		this.decor.color = two;
+		this.inner.color = three;
+	}
+
 	draw() {
 		this.outer.draw();
+		this.decor.draw();
 		this.inner.draw();
-		this.left.draw();
-		this.right.draw();
 	};
 
 	update() {
 		this.outer.update();
+		this.decor.update();
 		this.inner.update();
-		this.left.update();
-		this.right.update();
 	}
 
 	recalculate(changed, newX) {
 		if (changed === this.inner) {
-			this.inner.x = newX;
+			this.inner.x = constrain(newX, this.minX + this.left.w, this.maxX - this.inner.w - this.right.w);
 			this.left.x = this.inner.x - this.left.w;
 			this.right.x = this.inner.x + this.inner.w;
 		} else if (changed === this.left) {
-			this.left.x = newX;
+			this.left.x = constrain(newX, this.minX, this.right.x - 4 * this.right.w);
 			this.inner.x = this.left.x + this.left.w;
 			this.inner.w = this.right.x - this.inner.x;
 		} else if (changed === this.right) {
-			this.right.x = newX;
+			this.right.x = constrain(newX, this.left.x + 4 * this.left.w, this.maxX - this.right.w);
 			this.inner.w = this.right.x - this.inner.x;
 		} else if (changed === this.outer) {
 			this.left.x = this.outer.x;
@@ -365,6 +393,7 @@ class Slider {
 			this.inner.x = this.left.x + this.left.w;
 			this.inner.w = this.right.x - this.inner.x;
 		}
+		this.decor.x = this.left.x;
+		this.decor.w = this.right.x - this.left.x + this.right.w;
 	};
-
 }
