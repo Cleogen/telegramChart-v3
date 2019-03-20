@@ -103,6 +103,7 @@ class Plot {
 			line.draw();
 			this.animating |= line.update();
 		}, this);
+		console.log("request");
 		if (this.animating)
 			requestAnimationFrame(this.draw.bind(this));
 	};
