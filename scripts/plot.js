@@ -103,9 +103,11 @@ class Plot {
 			line.draw();
 			this.animating |= line.update();
 		}, this);
-		console.log("request");
-		if (this.animating)
+		
+		if (this.animating){
+			console.log("request");
 			requestAnimationFrame(this.draw.bind(this));
+		}
 	};
 
 	clearCanvas() {
