@@ -1,4 +1,4 @@
-const animationStep = 5;
+const animationStep = 4;
 
 class Plot {
 	constructor(container, types, names, colors, xAxis, dataset, labelFormat) {
@@ -90,19 +90,16 @@ class Plot {
 		this.clearCanvas();
 		this.slider.draw();
 		this.slider.update();
-		this.lines.forEach((line) => {
+		this.lines.forEach((line, index) => {
 			line.draw();
-			this.animating |= line.update();
+			this.sliderLines[index].draw();
+			this.animating |= line.update() || this.sliderLines[index].update();
 		}, this);
 		this.labels.forEach((label) => {
 			label.draw();
 			this.animating |= label.update();
 		}, this);
 		this.staticLines.forEach((line) => {
-			line.draw();
-			this.animating |= line.update();
-		}, this);
-		this.sliderLines.forEach((line) => {
 			line.draw();
 			this.animating |= line.update();
 		}, this);
@@ -269,10 +266,14 @@ class Line {
 }
 
 class Point {
-	constructor(ctx, x, y, label = "", w = 0, h = 0, color = "rgb(177,186,193)", type = "circle") {
+	static LABEL_ONLY = 2;
+	static ACTIVE = 1;
+	static HIDDEN = 0;
+
+	constructor(ctx, x, y, label = "", w = 0, h = 0, color = "rgb(177,186,193)", type = "circle", state = Point.LABEL_ONLY) {
 		this.type = type;
 		this.ctx = ctx;
-		this.ctx.shadowBlur = 0;
+		this.state = state;
 		this.color = color;
 		this.label = label;
 		this.x = x;
@@ -309,16 +310,22 @@ class Point {
 	}
 
 	draw() {
+		if (this.state === Point.HIDDEN)
+			return;
+
 		this.ctx.beginPath();
-		if (this.type === "circle")
-			this.ctx.ellipse(this.x, this.y, this.w, this.h, 0, 0, 2 * Math.PI);
-		else
-			this.ctx.rect(this.x, this.y, this.w, this.h);
 		this.ctx.fillStyle = this.color;
-		this.ctx.fill();
 		this.ctx.textAlign = "center";
 		this.ctx.font = "bold 10pt Arial";
 		this.ctx.fillText(this.label, this.x, this.y - 3);
+
+		if (this.state !== Point.LABEL_ONLY) {
+			if (this.type === "circle")
+				this.ctx.ellipse(this.x, this.y, this.w, this.h, 0, 0, 2 * Math.PI);
+			else
+				this.ctx.rect(this.x, this.y, this.w, this.h);
+			this.ctx.fill();
+		}
 		this.ctx.closePath();
 	}
 }
@@ -329,11 +336,11 @@ class Slider {
 		let h = end.y - start.y;
 		this.minX = start.x;
 		this.maxX = end.x;
-		this.outer = new Point(ctx, start.x, start.y, "", end.x - start.x, h, colors[0], "rect");
+		this.outer = new Point(ctx, start.x, start.y, "", end.x - start.x, h, colors[0], "rect", Point.ACTIVE);
 		this.right = new Point(ctx, 0, start.y, "", pusherWidth, h);
-		this.decor = new Point(ctx, 0, start.y, "", 0, h, colors[1], "rect");
+		this.decor = new Point(ctx, 0, start.y, "", 0, h, colors[1], "rect", Point.ACTIVE);
 		this.left = new Point(ctx, 0, start.y, "", pusherWidth, h);
-		this.inner = new Point(ctx, 0, start.y + 4, "", 0, h - 8, colors[2], "rect");
+		this.inner = new Point(ctx, 0, start.y + 4, "", 0, h - 8, colors[2], "rect", Point.ACTIVE);
 		this.recalculate(this.outer);
 		this.moving = false;
 		onTouchAndMove(this.move, ctx.canvas, [this.left, this.right, this.inner], this);
