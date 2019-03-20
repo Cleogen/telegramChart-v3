@@ -46,8 +46,7 @@ class Plot {
 			let p = minY + step * i;
 			let value = map(p, minY, maxY, this.mainC.maxY - 20, this.mainC.minY);
 			line.points = [
-				new Point(this.ctx, this.mainC.minX + this.ctx.measureText(p).width / 2,
-					value, parseInt(p)),
+				new Point(this.ctx, this.mainC.minX, value, parseInt(p)),
 				new Point(this.ctx, this.mainC.maxX, value)];
 			line.end = 2;
 			this.staticLines.push(line);
@@ -59,7 +58,8 @@ class Plot {
 		for (let i = 0; i < this.xLimit; i++) {
 			let p = minX + step * i;
 			let value = map(p, xAxis[0], xAxis[xAxis.length - 1], this.mainC.minX, this.mainC.maxX);
-			this.labels.push(new Point(this.ctx, value, this.mainC.maxY, this.formatLabel(p)));
+			this.labels.push(new Point(this.ctx, value - this.ctx.measureText(p).width / 2,
+				this.mainC.maxY, this.formatLabel(p)));
 		}
 
 		for (let i = 0; i < dataset.length; i++) {
@@ -90,15 +90,16 @@ class Plot {
 		this.lines.forEach((line, index) => {
 			line.draw();
 			this.sliderLines[index].draw();
-			this.animating |= line.update() || this.sliderLines[index].update();
+			this.animating = line.update();
+			this.animating = this.sliderLines[index].update();
 		}, this);
 		this.labels.forEach((label) => {
 			label.draw();
-			this.animating |= label.update();
+			this.animating = label.update();
 		}, this);
 		this.staticLines.forEach((line) => {
 			line.draw();
-			this.animating |= line.update();
+			this.animating = line.update();
 		}, this);
 
 		if (this.animating)
@@ -117,7 +118,6 @@ class Plot {
 		let end = this.slider.getEnd();
 		let s = Math.floor(map(start, this.sliderC.minX, this.sliderC.maxX, 0, this.xAxis.length));
 		let e = Math.ceil(map(end, this.sliderC.minX, this.sliderC.maxX, 0, this.xAxis.length));
-		let xAxis = this.xAxis.slice(s, e);
 		this.mainC.minX = map(this.sliderC.minX, start, end, this.sliderC.minX, this.sliderC.maxX);
 		this.mainC.maxX = map(this.sliderC.maxX, start, end, this.sliderC.minX, this.sliderC.maxX);
 		let minY = 0;
@@ -146,25 +146,20 @@ class Plot {
 			line.points[1].setY(value);
 		}
 
-		let minX = xAxis[parseInt(xAxis.length * 0.05)];
-		let maxX = xAxis[parseInt(xAxis.length * 0.95)];
+		let minX = this.xAxis[parseInt((e - s) * 0.05) + s];
+		let maxX = this.xAxis[parseInt((e - s) * 0.95) + s];
 		step = (maxX - minX) / (this.xLimit - 1);
 		for (let i = 0; i < this.xLimit; ++i) {
-			let p = minX + step * i;
-			let value = map(p, xAxis[0], xAxis[xAxis.length - 1], this.sliderC.minX, this.sliderC.maxX);
-			this.labels[i].setX(value);
-			this.labels[i].label = this.formatLabel(p);
+			this.labels[i].label = this.formatLabel(minX + step * i);
 		}
 
 		for (let i = 0; i < this.dataset.length; ++i) {
-			let line = this.lines[i];
-			let sliderLine = this.sliderLines[i];
 			for (let j = 1; j < this.dataset[i].length; ++j) {
-				let x = map(this.xAxis[j - 1], this.xAxis[0], this.xAxis[this.xAxis.length - 1], this.mainC.minX, this.mainC.maxX);
-				let y = map(this.dataset[i][j], minY, maxY, this.mainC.maxY - 20, this.mainC.minY);
-				let yS = map(this.dataset[i][j], sliderMin, sliderMax, this.sliderC.maxY, this.sliderC.minY + 2);
-				line.points[j - 1].set(x, y);
-				sliderLine.points[j - 1].setY(yS);
+				this.lines[i].points[j - 1].set(map(
+					this.xAxis[j - 1], this.xAxis[0], this.xAxis[this.xAxis.length - 1], this.mainC.minX, this.mainC.maxX),
+					map(this.dataset[i][j], minY, maxY, this.mainC.maxY - 20, this.mainC.minY));
+				this.sliderLines[i].points[j - 1].setY(
+					map(this.dataset[i][j], sliderMin, sliderMax, this.sliderC.maxY, this.sliderC.minY + 2));
 			}
 		}
 		if (!this.animating)
@@ -239,7 +234,7 @@ class Line {
 		let it = true;
 		this.points.forEach((point) => {
 			point.draw();
-			it &= point.update()
+			it = point.update()
 		});
 		return it;
 	}
@@ -312,7 +307,6 @@ class Point {
 
 		this.ctx.beginPath();
 		this.ctx.fillStyle = this.color;
-		this.ctx.textAlign = "center";
 		this.ctx.font = "bold 10pt Arial";
 		this.ctx.fillText(this.label, this.x, this.y - 3);
 
