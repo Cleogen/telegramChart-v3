@@ -2,16 +2,13 @@ const animationStep = 4;
 
 class Plot {
 	constructor(container, types, names, colors, xAxis, dataset, labelFormat) {
-		let canvas = document.createElement("canvas");
-		canvas.width = container.clientWidth;
-		canvas.height = container.clientHeight * 0.8;
+		let canvas = createCanvas(container.clientWidth, container.clientHeight * 0.8);
 		container.appendChild(canvas);
 		this.ctx = canvas.getContext("2d"); //TODO("Clean up here, not all members are actually required to be in this object");
-		this.ctx.imageSmoothingQuality = "high";
-		this.h = canvas.height;
-		this.w = canvas.width;
+		this.h = container.clientHeight * 0.8;
+		this.w = container.clientWidth;
 		this.animating = false;
-		this.mainC = {"minY": 15, "maxY": this.h * 0.8, "minX": 15, "maxX": this.w};
+		this.mainC = {"minY": 15, "maxY": this.h * 0.8, "minX": 0, "maxX": this.w};
 		this.sliderC = {
 			"minY": this.mainC.maxY + 5,
 			"maxY": this.h - 5,
@@ -33,7 +30,7 @@ class Plot {
 		this.slider = new Slider(this.ctx,
 			{"x": this.sliderC.minX, "y": this.sliderC.minY},
 			{"x": this.sliderC.maxX, "y": this.sliderC.maxY},
-			12, this.update, this);
+			10, this.update, this);
 
 		let minY = 0;
 		let maxY = -Infinity;
@@ -103,13 +100,13 @@ class Plot {
 			line.draw();
 			this.animating |= line.update();
 		}, this);
+
 		if (this.animating)
 			requestAnimationFrame(this.draw.bind(this));
 	};
 
 	clearCanvas() {
 		this.ctx.save();
-		this.ctx.setTransform(1, 0, 0, 1, 0, 0);
 		this.ctx.clearRect(0, 0, this.w, this.h);
 		this.ctx.restore();
 		this.ctx.beginPath();

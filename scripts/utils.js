@@ -39,8 +39,8 @@ function onTouchAndMove(callback, object, targetP, caller) {
 		}
 	};
 	object.onmousemove = function (evt) {
-		let e = getPosition(evt);
 		if (dragging !== null) {
+			let e = getPosition(evt);
 			evt.preventDefault();
 			evt.stopPropagation();
 			e.begin = begin;
@@ -50,8 +50,6 @@ function onTouchAndMove(callback, object, targetP, caller) {
 		}
 	};
 	object.onmouseup = function (evt) {
-		evt.preventDefault();
-		evt.stopPropagation();
 		dragging = null;
 	};
 	object.ontouchstart = (e) => object.onmousedown(e);
@@ -104,3 +102,24 @@ HTMLElement.prototype.pseudoStyle = function (element, prop, value) {
 	_head.appendChild(_sheet);
 	return this;
 };
+
+function pixelRatio() {
+	let ctx = document.createElement("canvas").getContext("2d"),
+		dpr = window.devicePixelRatio || 1,
+		bsr = ctx.webkitBackingStorePixelRatio ||
+			ctx.mozBackingStorePixelRatio ||
+			ctx.msBackingStorePixelRatio ||
+			ctx.oBackingStorePixelRatio ||
+			ctx.backingStorePixelRatio || 1;
+	return dpr / bsr;
+}
+
+function createCanvas(w, h, ratio = pixelRatio()) {
+	let can = document.createElement("canvas");
+	can.width = w * ratio;
+	can.height = h * ratio;
+	can.style.width = w + "px";
+	can.style.height = h + "px";
+	can.getContext("2d").setTransform(ratio, 0, 0, ratio, 0, 0);
+	return can;
+}
