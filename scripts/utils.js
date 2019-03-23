@@ -52,8 +52,8 @@ function onTouchAndMove(callback, object, targetP, caller) {
 	object.onmouseup = function (evt) {
 		dragging = null;
 	};
-	object.ontouchstart = (e) => object.onmousedown(e);
-	object.ontouchmove = (e) => object.onmousemove(e);
+	object.addEventListener("touchstart", object.onmousedown, {"passive": true});
+	object.addEventListener("touchmove", object.onmousemove, {"passive": true});
 	object.ontouchend = (e) => object.onmouseup(e);
 }
 
@@ -64,9 +64,9 @@ function createInput(container, id, name, color, call, obj) {
 	input.setAttribute("plot-data", id);
 	input.checked = true;
 	input.type = "checkbox";
-	input.id = input.name = "check_" + id;
+	input.id = input.name = "check_" + id + "_" + Math.random() * 1000;
 	let label = document.createElement("label");
-	label.htmlFor = "check_" + id;
+	label.htmlFor = input.id;
 	label.pseudoStyle("after", "background-color", color);
 	let span = document.createElement("span");
 	span.innerText = name;

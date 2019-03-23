@@ -90,16 +90,16 @@ class Plot {
 		this.lines.forEach((line, index) => {
 			line.draw();
 			this.sliderLines[index].draw();
-			this.animating = line.update();
-			this.animating = this.sliderLines[index].update();
+			this.animating |= line.update();
+			this.animating |= this.sliderLines[index].update();
 		}, this);
 		this.labels.forEach((label) => {
 			label.draw();
-			this.animating = label.update();
+			this.animating |= label.update();
 		}, this);
 		this.staticLines.forEach((line) => {
 			line.draw();
-			this.animating = line.update();
+			this.animating |= line.update();
 		}, this);
 
 		if (this.animating)
@@ -135,6 +135,10 @@ class Plot {
 					maxY = Math.max(maxY, this.dataset[i][j]);
 				}
 			}
+		}
+		if (maxY === -Infinity) {
+			this.draw();
+			return;
 		}
 		let step = (maxY - minY) / (this.yLimit - 1);
 		for (let i = 0; i < this.yLimit; ++i) {
@@ -191,16 +195,12 @@ class Plot {
 
 	switchMode(el) {
 		if (el.innerHTML.includes("Night")) {
-			document.documentElement.className = "dark-mode";
-			el.innerHTML = "Switch to Day Mode";
 			this.slider.setColors(
 				"#1f2a38",
 				"#40566b",
 				"#242f3e"
 			);
 		} else {
-			document.documentElement.className = "";
-			el.innerHTML = "Switch to Night Mode";
 			this.slider.setColors(
 				"#f5f9fb",
 				"#ddeaf3",

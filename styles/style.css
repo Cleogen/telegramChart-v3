@@ -8,8 +8,9 @@
 	color: snow;
 }
 
-.plot-check {
-
+.plot {
+	width: 100%;
+	height: 500px;
 }
 
 .inputGroup {
